@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1A30">
+<title>Gurbani Audio Searcher</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gurbani">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="icon" href="logo64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta+Mahee:wght@400;500;600;700&family=Tiro+Gurmukhi&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EDF1F7; --panel: #FFFFFF; --ink: #14213D; --muted: #56647F; --rule: #D3DBE8;
+  --kesri: #B8650A; --follow: #1E7F52; --hold: #3558B8; --lost: #B9422F;
+  --btn: #E3E9F3; --btn-ink: #14213D;
+  --gur: "Tiro Gurmukhi", "Noto Serif Gurmukhi", "Gurmukhi MN", "Noto Sans Gurmukhi", "Raavi", "Nirmala UI", serif;
+  --ui: "Mukta Mahee", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1A30; --panel: #172642; --ink: #F3F1EC; --muted: #9FB0CC; --rule: #2A3C5E;
+    --kesri: #F2A33A; --follow: #58C48D; --hold: #8EABF5; --lost: #F08070;
+    --btn: #22365A; --btn-ink: #F3F1EC; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1A30; --panel: #172642; --ink: #F3F1EC; --muted: #9FB0CC; --rule: #2A3C5E;
+  --kesri: #F2A33A; --follow: #58C48D; --hold: #8EABF5; --lost: #F08070;
+  --btn: #22365A; --btn-ink: #F3F1EC; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.5 var(--ui); -webkit-tap-highlight-color: transparent; }
+button, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--kesri); outline-offset: 2px; }
+.gur { font-family: var(--gur); }
+[hidden] { display: none !important; }
+
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 3; background: var(--bg); display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.status { display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; min-width: 0; }
+.status span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c, var(--kesri)); flex: none; }
+[data-group] { --c: var(--kesri); }
+[data-group="follow"] { --c: var(--follow); }
+[data-group="hold"] { --c: var(--hold); }
+[data-group="lost"] { --c: var(--lost); }
+.seg { display: inline-flex; background: var(--btn); border-radius: 10px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 8px; font-weight: 500; min-height: 40px; }
+.seg button[aria-pressed="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
+.sehaj { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; min-height: 40px; padding: 0 10px; border-radius: 10px; }
+.sehaj:has(input:checked) { background: var(--btn); }
+.sehaj input { width: 20px; height: 20px; margin: 0; accent-color: var(--kesri); }
+select { width: 100%; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
+
+main { padding: 16px 16px calc(230px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 22px; }
+#tab-now { display: grid; gap: 22px; }
+.now { border-left: 6px solid var(--c); padding: 2px 0 4px 14px; }
+.title { font-size: 16px; color: var(--muted); line-height: 1.5; }
+.cur { font-size: 28px; line-height: 1.5; margin: 6px 0 0; }
+.next { font-size: 18px; color: var(--muted); margin: 8px 0 0; line-height: 1.55; }
+.where { color: var(--muted); font-size: 14px; margin-top: 6px; }
+.empty { color: var(--muted); }
+h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+.card { border: 1px solid var(--kesri); border-radius: 14px; padding: 14px; background: var(--panel); }
+/* Asa Ki Vaar: where the Vaar has reached (the sangat screens show just the Gurbani) */
+.akv { display: grid; gap: 10px; }
+.akv h2 { display: flex; justify-content: space-between; align-items: baseline; margin: 0; font-size: 15px; }
+.akv h2 .gur { font-size: 18px; font-weight: 400; }
+.akv-strip { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+.akv-strip button { min-height: 38px; padding: 0; border-radius: 8px; border: 1px solid var(--rule); background: transparent; color: var(--ink);
+                    font: 400 18px/1 var(--gur); }
+.akv-strip button.done { color: var(--muted); background: var(--btn); }
+.akv-strip button[aria-current="true"] { background: var(--kesri); border-color: var(--kesri); color: #fff; }
+.akv-parts { display: flex; gap: 6px; }
+.akv-parts span { flex: 1; text-align: center; padding: 6px 0; border-radius: 9px; border: 1px solid var(--rule); font: 400 18px/1.2 var(--gur); color: var(--muted); }
+.akv-parts span.on { border-color: var(--kesri); color: var(--ink); font-weight: 600; box-shadow: inset 0 -3px 0 var(--kesri); }
+.akv-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.akv-btns .btn { flex: 1 1 40%; }
+.card p { margin: 0 0 4px; }
+.card .gur { font-size: 19px; line-height: 1.55; }
+.small { color: var(--muted); font-size: 14px; margin-bottom: 10px !important; }
+ol { list-style: none; margin: 0; padding: 0; }
+.cands li { padding: 12px 0; border-top: 1px solid var(--rule); }
+.cands li:first-child { border-top: 0; }
+.lines li button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 10px 12px; border-radius: 10px; font-family: var(--gur); font-size: 18px; line-height: 1.55; color: var(--muted); min-height: 48px; }
+.lines li button[aria-current="true"] { background: var(--panel); color: var(--ink); box-shadow: inset 5px 0 0 var(--c); }
+.lines li button.rahao::after { content: " rahao"; font: 500 12px var(--ui); color: var(--kesri); }
+
+.btn { border: 0; background: var(--btn); color: var(--btn-ink); border-radius: 14px; min-height: 56px; padding: 10px 16px; font-weight: 600; font-size: 17px; }
+.btn:active { filter: brightness(.94); }
+.btn.primary { background: var(--kesri); color: #fff; }
+.btn.slim { min-height: 44px; font-size: 16px; }
+
+.controls { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; background: var(--bg); border-top: 1px solid var(--rule); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.controls .btn { min-height: 52px; font-size: 16px; line-height: 1.25; }
+.controls .listen { position: relative; overflow: hidden; }
+.controls .listen[aria-pressed="true"] { background: var(--kesri); color: #fff; }
+.controls .lvl { position: absolute; left: 0; bottom: 0; height: 5px; width: 0; background: var(--follow); transition: width .1s; }
+.mic-line { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+.controls .hold[aria-pressed="true"] { background: var(--hold); color: #fff; }
+.controls .reset { grid-column: 1 / -1; min-height: 44px; font-weight: 500; background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+.controls .reset.armed { box-shadow: none; background: var(--lost); color: #fff; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--btn); border-radius: 12px; padding: 4px; width: 100%; }
+.tabs button { border: 0; background: transparent; border-radius: 9px; min-height: 42px; font-weight: 500; }
+.tabs button[aria-selected="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
+.qrow { display: flex; gap: 8px; }
+.qrow input { flex: 1; min-width: 0; font: inherit; font-size: 18px; color: inherit; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; }
+.qrow input:focus { border-color: var(--kesri); outline: none; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 6px 12px; font-size: 15px; min-height: 36px; }
+.chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.results li + li, .hist li + li { border-top: 1px solid var(--rule); }
+.results button, .hist button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 12px 6px; border-radius: 10px; }
+.results button:active, .hist button:active { background: var(--btn); }
+.results .g, .hist .g { font-family: var(--gur); font-size: 19px; line-height: 1.5; display: block; }
+.results .w, .hist .w { color: var(--muted); font-size: 14px; display: block; }
+.results .e { color: var(--muted); font-size: 14px; display: block; line-height: 1.4; margin-top: 2px; }
+.hist .t { font-weight: 600; color: var(--kesri); margin-right: 6px; }
+.castbtn { border: 0; background: var(--btn); color: var(--ink); border-radius: 10px; width: 46px; height: 46px; display: grid; place-items: center; flex: none; }
+.castbtn .cast-fill { display: none; }
+.castbtn.on { background: var(--kesri); color: #fff; }
+.castbtn.on .cast-fill { display: inline; }
+.sheet { border: 1px solid var(--rule); border-radius: 14px; background: var(--panel); padding: 14px; display: grid; gap: 10px; }
+.sheet h2 { margin: 0; }
+.sheet ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sheet li button { width: 100%; text-align: left; border: 0; background: var(--btn); border-radius: 12px; padding: 12px 14px; font-weight: 600; min-height: 52px; }
+.sheet li button small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
+.sheet .now { border: 1px solid var(--kesri); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+.kbd-toggle { flex: none; border: 1px solid var(--rule); background: var(--panel); border-radius: 12px; width: 52px; font-family: var(--gur); font-size: 22px; }
+.kbd-toggle[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.gkbd { display: grid; gap: 6px; margin-top: 10px; }
+.gkbd .keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.gkbd button { border: 0; background: var(--panel); box-shadow: inset 0 0 0 1px var(--rule); border-radius: 10px; height: 46px; font-family: var(--gur); font-size: 22px; padding: 0; }
+.gkbd button:active { background: var(--btn); }
+.gkbd .row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 5px; }
+.gkbd .row button { font-family: var(--ui); font-size: 16px; font-weight: 600; }
+.gkbd small { color: var(--muted); font-size: 13px; }
+.letters-preview { font-family: var(--gur); font-size: 22px; letter-spacing: .12em; color: var(--ink); }
+.banner { margin: 0; border: 1px solid var(--lost); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+@media (min-width: 700px) { main, .top { max-width: 720px; margin: 0 auto; } .controls { max-width: 720px; margin: 0 auto; } }
+@media (prefers-reduced-motion: no-preference) { .cur { transition: opacity .2s; } }
+.top .logo { width: 32px; height: 32px; flex: none; }
+.top .appname { flex: 1 1 calc(100% - 50px); font-weight: 600; font-size: 15px; line-height: 1.3; }
+.top .appname .beta { color: var(--kesri); font-weight: 500; }
+.top .appname .ver { color: var(--muted); font-weight: 500; margin-left: 4px; }
+/* ਵਾਹਿਗੁਰੂ, a message or a picture on the screens instead of the Gurbani */
+.tabs.four { grid-template-columns: repeat(4, 1fr); }
+.tabs button { position: relative; }
+.tabs button .on-dot { position: absolute; top: 7px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--kesri); }
+.tabs button .on-dot[hidden] { display: none; }
+#tab-msg { display: grid; gap: 12px; }
+#tab-msg[hidden] { display: none; }
+#tab-msg h2 { margin: 6px 0 0; }
+.vaheguru { width: 100%; font: 400 34px/1.2 var(--gur); min-height: 76px; }
+.msgform { display: flex; gap: 8px; }
+.msgform input { flex: 1; min-width: 0; font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; }
+.msgform input:focus { border-color: var(--kesri); outline: none; }
+.msg-recent { display: flex; flex-wrap: wrap; gap: 8px; }
+.msg-recent button { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 6px 14px; font-size: 15px; min-height: 40px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+.msg-pics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.msg-pics:empty { display: none; }
+.msg-pics .pic { position: relative; }
+.msg-pics .pic > button:first-child { width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--rule); border-radius: 10px; padding: 0; overflow: hidden; background: var(--panel); display: block; }
+.msg-pics img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.msg-pics .forget { position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); font-size: 15px; line-height: 28px; padding: 0; }
+.where-to { display: grid; gap: 10px; }
+.where-to label { display: flex; align-items: center; gap: 12px; min-height: 40px; }
+.where-to input { width: 22px; height: 22px; margin: 0; accent-color: var(--kesri); }
+.msg-on { margin: 0; display: grid; gap: 10px; border: 2px solid var(--kesri); border-radius: 14px; padding: 12px 14px; background: var(--panel); }
+.msg-on[hidden] { display: none; }
+.msg-on span { font-weight: 600; }
+.msg-on img { max-height: 70px; max-width: 100%; border-radius: 8px; justify-self: start; }
+
+/* web version: start-up panel, sangat screen, recording */
+.start { display: grid; gap: 12px; }
+.start h2 { margin: 0; font-size: 19px; }
+.start .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.start .row b { font-weight: 600; }
+.start .row span { color: var(--muted); font-size: 15px; grid-column: 1 / -1; }
+.start .row.done span { color: var(--follow); }
+.bar { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; grid-column: 1 / -1; }
+.bar i { display: block; height: 100%; width: 0; background: var(--kesri); transition: width .3s; }
+.start .note { margin: 0; color: var(--muted); font-size: 15px; }
+.start .err { margin: 0; color: var(--lost); font-weight: 600; }
+.trybox { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.trybox .small { margin: 0; flex: 1 1 200px; }
+.top .status { flex: 1 1 100%; }            /* the status on a row of its own: never cut short */
+.screenbtn { border: 0; background: var(--btn); border-radius: 10px; min-height: 40px; padding: 0 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.sangat { position: fixed; inset: 0; z-index: 20; background: #0B1324; color: #F3F1EC; display: grid; grid-template-rows: 1fr auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-right, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 12px) calc(env(safe-area-inset-left, 0px) + 20px); }
+.sangat .body { display: flex; flex-direction: column; justify-content: center; gap: 2.2vh; text-align: center; min-height: 0; overflow: hidden; }
+.sangat .g { font-family: var(--gur); font-size: clamp(30px, 7.2vmin, 96px); line-height: 1.35; color: #FFFFFF; margin: 0; text-wrap: balance; }
+.sangat .en { font-size: clamp(17px, 3.6vmin, 44px); line-height: 1.35; color: #F2D9A6; margin: 0; text-wrap: balance; }
+.sangat .nx { font-family: var(--gur); font-size: clamp(18px, 3.8vmin, 48px); color: #8EA0BF; margin: 0; text-wrap: balance; }
+.sangat .msg { font-family: var(--gur); font-size: clamp(40px, 12vmin, 140px); color: #F2A33A; margin: 0; }
+.sangat .msgtext { font-family: var(--ui); font-size: clamp(26px, 6vmin, 80px); color: #FFFFFF; margin: 0; }
+.sangat img { max-width: 100%; max-height: 80vh; object-fit: contain; align-self: center; }
+.sangat .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #8EA0BF; font-size: 14px; }
+.sangat .foot button { border: 1px solid #2A3C5E; background: transparent; color: #F3F1EC; border-radius: 10px; min-height: 40px; padding: 0 14px; font: inherit; }
+</style>
+</head>
+<body>
+<header class="top">
+  <img class="logo" src="logo64.png" alt="" width="32" height="32">
+  <div class="appname">Gurbani Audio Searcher <span class="beta">(beta testing)</span> <span class="ver">ਅ੧</span></div>
+  <div class="status" id="status" data-group="find" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="statusText">Getting ready</span></div>
+  <div class="seg" role="group" aria-label="What is happening">
+    <button type="button" data-mode="kirtan" aria-pressed="true">Kirtan</button>
+    <button type="button" data-mode="paath" aria-pressed="false">Paath</button>
+  </div>
+  <label class="sehaj"><input type="checkbox" id="sehaj"> Akhand / Sehaj Paath</label>
+  <label class="sehaj" id="akvOpt"><input type="checkbox" id="akvOn"> Asa Ki Vaar</label>
+  <button type="button" class="castbtn" hidden id="castBtn" aria-label="Cast to a TV" title="Cast to a TV"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/><path class="cast-fill" fill="currentColor" d="M5 7v1.63c3.96 1.28 7.09 4.41 8.37 8.37H19V7H5z"/></svg></button>
+  <button type="button" class="screenbtn" id="screenBtn" aria-label="Show the sangat screen full screen"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3 5h18v12H3zM8 19h8v2H8z"/></svg>Sangat screen</button>
+  <select id="bani" aria-label="Bani to follow" hidden><option value="">Detect the bani automatically</option></select>
+  <div class="tabs four" role="tablist" aria-label="Views">
+    <button type="button" role="tab" data-tab="now" aria-selected="true">Now</button>
+    <button type="button" role="tab" data-tab="search" aria-selected="false">Search</button>
+    <button type="button" role="tab" data-tab="history" aria-selected="false">History</button>
+    <button type="button" role="tab" data-tab="msg" aria-selected="false">Message<span class="on-dot" id="msgDot" hidden></span></button>
+  </div>
+</header>
+
+<main>
+  <p class="banner" id="banner" role="alert" hidden></p>
+  <section class="msg-on" id="msgOn" hidden aria-live="polite"><span id="msgOnText"></span><img id="msgOnImg" alt="" hidden><button type="button" class="btn slim primary" id="msgOnBack">Back to Gurbani</button></section>
+  <section id="tab-msg" hidden aria-label="Message on the screens">
+    <p class="small" style="margin:0 !important">Shows on the sangat screen instead of the Gurbani. Listening carries on; "Back to Gurbani" returns to the current line.</p>
+    <button type="button" class="btn vaheguru" id="msgVaheguru">ਵਾਹਿਗੁਰੂ</button>
+    <h2>A message</h2>
+    <form class="msgform" id="msgForm"><input type="text" id="msgText" maxlength="200" placeholder="e.g. Ardas will begin shortly" enterkeyhint="send" aria-label="Message"><button type="submit" class="btn slim primary">Show</button></form>
+    <div class="msg-recent" id="msgRecent"></div>
+    <h2>A picture</h2>
+    <div class="msg-pics" id="msgPics"></div>
+    <button type="button" class="btn slim" id="msgPick">Choose a picture</button>
+    <input type="file" id="msgFile" accept="image/*" hidden>
+    
+    <div class="where-to" hidden>
+      <label><input type="checkbox" id="msgScreens" checked> Projector and TV</label>
+      <label><input type="checkbox" id="msgOverlay" checked> Livestream overlay</label>
+    </div>
+  </section>
+  <section class="sheet" id="secureSheet" hidden aria-label="Use this phone's microphone">
+    <h2>Use this phone's microphone</h2>
+    <p style="margin:0">Phones only let a page use the microphone over a secure connection, so this page needs to open its secure address first.</p>
+    <p style="margin:0">Your browser will then warn that the connection isn't private. That's expected: it is the console on the laptop. Tap <b>Advanced</b> (or <b>Show details</b>), then <b>Proceed</b> (or <b>visit this website</b>). This phone only has to do that once.</p>
+    <button type="button" class="btn slim primary" id="secureGo">Continue</button>
+    <button type="button" class="btn slim" id="secureClose">Not now</button>
+  </section>
+  <section class="sheet" id="listenPrompt" hidden aria-label="Ready to listen">
+    <p style="margin:0">Secure connection ready. Tap <b>Listen with this phone</b> at the bottom to start. Keep this page open and the phone unlocked and plugged in; place it near the ragis' speaker.</p>
+  </section>
+  <section class="sheet" id="castSheet" hidden aria-label="Cast">
+    <div class="now" id="castNow" hidden><span id="castNowText"></span><button type="button" class="btn slim" id="castStop">Stop casting</button></div>
+    <h2>Cast the sangat display to</h2>
+    <ul id="castList"></ul>
+    <p class="small" id="castNote" style="margin:0">Looking for Chromecasts…</p>
+    <button type="button" class="btn slim" id="castClose">Close</button>
+  </section>
+  <section id="tab-search" hidden aria-label="Search Gurbani">
+    <div class="qrow"><input type="search" id="q" placeholder="Search Gurbani" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button type="button" class="kbd-toggle" id="kbdBtn" aria-pressed="false" aria-label="Gurmukhi keyboard">ੳ</button></div>
+    <div class="gkbd" id="gkbd" hidden></div>
+    <div class="chips" role="group" aria-label="Search by" style="margin-top:10px">
+      <button type="button" data-q="auto" aria-pressed="true">Gurmukhi</button>
+      <button type="button" data-q="letters" aria-pressed="false">First letters</button>
+      <button type="button" data-q="words" aria-pressed="false">Words</button>
+      <button type="button" data-q="latin" aria-pressed="false">English</button>
+    </div>
+    <p class="small" id="qHint" style="margin:10px 0 0">Type first letters or words; English keys come out in Gurmukhi on the SikhiToTheMax layout (mmrAe = ਮਮਰਅੲ). Choose English for the translation or words in English letters. Tap ੳ for a Gurmukhi keyboard. Tap a line to put it on the screen.</p>
+    <ol class="results" id="results"></ol>
+  </section>
+  <section id="tab-history" hidden aria-label="History">
+    <p class="small" id="histEmpty">Shabads appear here once they have been on screen for a little while, or as soon as someone picks one.</p>
+    <ol class="hist" id="histList"></ol>
+  </section>
+  <div id="tab-now">
+  <section class="card start" id="startBox" aria-live="polite">
+    <h2>Getting ready</h2>
+    <div class="row" id="rowAsr"><b>Speech model</b><div class="bar"><i id="barAsr"></i></div><span id="txtAsr">Waiting</span></div>
+    <div class="row" id="rowEng"><b>Gurbani engine</b><div class="bar"><i id="barEng"></i></div><span id="txtEng">Waiting</span></div>
+    <p class="note">The first time, this downloads about 200 MB, so use Wi-Fi; after that the speech model is kept on this phone. Everything runs on this phone: nothing it hears is sent anywhere.</p>
+    <p class="err" id="startErr" hidden></p>
+  </section>
+  <section class="now" id="now" data-group="find" aria-label="On the screen now">
+    <div class="title gur" id="title"></div>
+    <p class="cur gur" id="cur"></p>
+    <p class="next gur" id="next"></p>
+    <div class="where" id="where"></div>
+    <p class="mic-line" id="micLine"></p>
+    <p class="empty" id="empty">Nothing is on the screen yet. Tap Start listening below; the Gurbani appears here as soon as the kirtan or paath is recognised.</p>
+  </section>
+
+  <section class="card akv" id="akvBox" hidden aria-label="Asa Ki Vaar">
+    <h2><span>Asa Ki Vaar</span><span class="gur" id="akvWhere"></span></h2>
+    <div class="akv-strip" id="akvStrip" role="group" aria-label="Go to a pauri"></div>
+    <div class="akv-parts" aria-hidden="true"><span data-part="chhant">ਛੰਤ</span><span data-part="salok">ਸਲੋਕ</span><span data-part="pauri">ਪਉੜੀ</span></div>
+    <p class="small" id="akvNote" hidden></p>
+    <div class="akv-btns">
+      <button type="button" class="btn slim primary" id="akvResume" hidden>Back to the Vaar</button>
+      <button type="button" class="btn slim" id="akvNext">Next part</button>
+      <button type="button" class="btn slim" id="akvEnd">End the Vaar</button>
+    </div>
+  </section>
+
+  <section class="card" id="akvSug" hidden>
+    <p>This is part of Asa Ki Vaar.</p>
+    <button type="button" class="btn slim primary" id="akvSugBtn">Follow Asa Ki Vaar in order</button>
+  </section>
+
+  <section class="card" id="prevCard" hidden>
+    <p class="gur" id="prevLine"></p>
+    <p class="small" id="prevWhere"></p>
+    <button type="button" class="btn slim primary" id="prevBtn">Back to previous shabad</button>
+  </section>
+
+  <section class="cands" id="candsBox" hidden>
+    <h2>Possible shabads</h2>
+    <ol id="cands"></ol>
+  </section>
+
+  <section class="card" id="tryBox">
+    <div class="trybox">
+      <p class="small">To try it without live kirtan, play a recording (an audio file on this phone) through it instead of the microphone.</p>
+      <button type="button" class="btn slim" id="tryPick">Play a recording</button>
+      <button type="button" class="btn slim" id="tryStop" hidden>Stop the recording</button>
+      <input type="file" id="tryFile" accept="audio/*,video/*" hidden>
+    </div>
+    <p class="small" id="tryNote" style="margin:8px 0 0" hidden></p>
+  </section>
+
+  <section class="lines" id="linesBox" hidden>
+    <h2 id="linesTitle">Lines</h2>
+    <ol id="lines"></ol>
+  </section>
+  </div>
+</main>
+
+<div class="sangat" id="sangat" hidden role="dialog" aria-label="Sangat screen">
+  <div class="body" id="sgBody"><p class="g" id="sgG"></p><p class="en" id="sgEn"></p><p class="nx" id="sgNx"></p></div>
+  <div class="foot"><span id="sgWhere"></span><button type="button" id="sgClose">Close</button></div>
+</div>
+
+<nav class="controls" aria-label="Display controls">
+  <button type="button" class="btn" id="back">Previous line</button>
+  <button type="button" class="btn" id="fwd">Next line</button>
+  <button type="button" class="btn hold" id="hold" aria-pressed="false">Pause auto changes</button>
+  <button type="button" class="btn listen" id="listen" aria-pressed="false">Start listening<span class="lvl" id="lvl"></span></button>
+  <button type="button" class="btn reset" id="reset">Start over</button>
+</nav>
+
+<script src="local.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const GROUP = { following: "follow", held_simran: "hold", held_quiet: "hold", held_user: "hold",
+                finding: "find", listening: "find", lost: "lost", searching_ahead: "hold" };
+const S = { tracks: {}, state: null, lastList: null, lastCands: null, banis: [], msg: null, recentImages: [], recentTexts: [] };
+let ws = null, disconnected = false;
+
+function send(c, quiet) {
+  if (ws && ws.readyState === 1) { ws.send(JSON.stringify(c)); if (!quiet && navigator.vibrate) navigator.vibrate(12); }
+  else banner("Not connected to the console yet.");
+}
+function banner(msg) { $("banner").textContent = msg || ""; $("banner").hidden = !msg; }
+
+var render = function () {
+  const st = S.state;
+  const status = st ? st.status : "listening";
+  const group = GROUP[status] || "find";
+  $("status").dataset.group = group; $("now").dataset.group = group;
+  $("statusText").textContent = st ? st.status_text : ($("statusText").textContent);
+  const held = status === "held_user";
+  $("hold").setAttribute("aria-pressed", String(held));
+  $("hold").textContent = held ? "Resume auto changes" : "Pause auto changes";
+  const mode = st ? st.mode : "kirtan";
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  const sehaj = !!(st && st.sehaj);
+  if (st) $("sehaj").checked = sehaj;
+  $("bani").hidden = mode !== "paath" || sehaj;
+  $("akvOpt").hidden = mode !== "kirtan";
+  $("sehaj").parentElement.hidden = mode !== "paath";               // each mode shows its own option
+  $("akvOn").checked = !!(st && st.akv);
+  renderAkv(st && mode === "kirtan" ? st.akv : null);
+  const sug = st && mode === "kirtan" ? st.suggestion : null;
+  $("akvSug").hidden = !(sug && sug.bani_id === 13 && !st.akv);
+
+  const track = st && st.track_id ? S.tracks[st.track_id] : null;
+  const pos = st ? (st.pos !== null && st.pos !== undefined ? st.pos : st.last_pos) : null;
+  if (!track || pos === null || pos === undefined) {
+    $("title").textContent = ""; $("cur").textContent = ""; $("next").textContent = ""; $("where").textContent = "";
+    $("empty").hidden = false; $("linesBox").hidden = true; S.lastList = null;
+  } else {
+    const L = track.lines, line = L[pos] || {};
+    const np = st.next_pos !== undefined && st.next_pos !== null ? st.next_pos : (pos + 1 < L.length ? pos + 1 : null);
+    $("empty").hidden = true;
+    $("title").textContent = line.st || track.title || "";          // Akhand / Sehaj Paath: the line's own shabad
+    $("cur").textContent = line.g || "";
+    $("next").textContent = np !== null && L[np] ? L[np].g : "";
+    const li = line.ln ? line.li : pos, ln = line.ln || L.length;
+    $("where").textContent = [`Line ${li + 1} of ${ln}`, line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.kind === "bani" ? track.subtitle : ""].filter(Boolean).join(", ");
+    const key = track.id + ":" + pos;
+    if (S.lastList !== key) { renderList(track, pos); S.lastList = key; }
+    if (track.kind === "bani") $("bani").value = String(track.bani_id);
+  }
+
+  const prev = st && st.mode === "kirtan" ? st.previous : null;
+  $("prevCard").hidden = !prev;
+  if (prev) { $("prevLine").textContent = prev.first_line; $("prevWhere").textContent = prev.where; $("prevBtn").onclick = () => send({ cmd: "back", sid: prev.sid }); }
+
+  const cands = st ? st.candidates || [] : [];
+  const showC = cands.length > 0 && ["finding", "listening", "lost"].includes(status);
+  $("candsBox").hidden = !showC;
+  const ck = showC ? cands.map(c => c.sid).join(",") : "";
+  if (showC && ck !== S.lastCands) {
+    $("cands").replaceChildren(...cands.map(c => {
+      const li = document.createElement("li");
+      const g = document.createElement("p"); g.className = "gur"; g.style.margin = "0"; g.style.fontSize = "19px"; g.textContent = c.first_line;
+      const w = document.createElement("p"); w.className = "small"; w.style.margin = "2px 0 8px"; w.textContent = c.where;
+      const b = document.createElement("button"); b.type = "button"; b.className = "btn slim"; b.textContent = "Show this";
+      b.onclick = () => send({ cmd: "confirm", sid: c.sid });
+      li.append(g, w, b); return li;
+    }));
+  }
+  S.lastCands = ck;
+}
+
+const GUR_DIGITS = "੦੧੨੩੪੫੬੭੮੯";
+const gurNum = (n) => String(n).replace(/[0-9]/g, d => GUR_DIGITS[+d]);
+function renderAkv(a) {
+  $("akvBox").hidden = !a;
+  if (!a) return;
+  const strip = $("akvStrip");
+  if (!strip.children.length) {
+    for (let n = 1; n <= 24; n++) {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = gurNum(n); b.dataset.n = n;
+      b.setAttribute("aria-label", `Pauri ${n}`);
+      b.onclick = () => send({ cmd: "akv", action: "pauri", n });
+      strip.append(b);
+    }
+  }
+  const cur = a.paused ? null : a.pauri;
+  [...strip.children].forEach(b => {
+    const n = +b.dataset.n;
+    b.setAttribute("aria-current", String(n === cur));
+    b.classList.toggle("done", a.pauri !== null && (n < a.pauri || (a.paused && n === a.pauri)));
+  });
+  document.querySelectorAll(".akv-parts span").forEach(x => x.classList.toggle("on", !a.paused && x.dataset.part === a.part));
+  $("akvWhere").textContent = a.paused ? "" : `ਪਉੜੀ ${gurNum(a.pauri)}`;
+  $("akvNote").hidden = !a.paused;
+  if (a.paused) $("akvNote").textContent = a.next
+    ? `A shabad between pauris. The Vaar carries on by itself when chhant ${a.next} is sung.` : "The Vaar is over.";
+  $("akvResume").hidden = !a.paused || !a.next;
+  $("akvNext").hidden = !!a.paused;
+}
+
+function renderList(track, pos) {
+  const L = track.lines, short = L.length <= 40;
+  const from = short ? 0 : Math.max(0, pos - 3), to = short ? L.length : Math.min(L.length, pos + 13);
+  $("linesBox").hidden = false;
+  $("linesTitle").textContent = track.kind === "bani" || track.kind === "granth" ? "Lines around this point" : "Lines of this shabad";
+  const items = [];
+  for (let i = from; i < to; i++) {
+    const li = document.createElement("li"), b = document.createElement("button");
+    b.type = "button"; b.textContent = L[i].g;
+    if (track.kind === "shabad" && /ਰਹਾਉ/.test(L[i].g)) b.classList.add("rahao");
+    if (i === pos) b.setAttribute("aria-current", "true");
+    b.onclick = () => send({ cmd: "goto", pos: i });
+    li.appendChild(b); items.push(li);
+  }
+  $("lines").replaceChildren(...items);
+}
+
+/* ---------------- ਵਾਹਿਗੁਰੂ, a message or a picture on the screens ---------------- */
+function sendMsg(c) { send(Object.assign({ cmd: "screen_msg", screens: $("msgScreens").checked, overlay: $("msgOverlay").checked }, c)); }
+function renderMsg() {
+  const m = S.msg, on = !!(m && (m.screens || m.overlay));
+  $("msgOn").hidden = !on; $("msgDot").hidden = !on;
+  if (on) {
+    const where = "sangat screen";
+    const what = m.kind === "image" ? "a picture" : m.kind === "vaheguru" ? "ਵਾਹਿਗੁਰੂ" : `"${m.text}"`;
+    $("msgOnText").textContent = `Showing ${what} on the ${where}`;
+    $("msgOnImg").hidden = m.kind !== "image";
+    if (m.kind === "image" && $("msgOnImg").getAttribute("src") !== m.image) $("msgOnImg").src = m.image;
+  }
+  $("msgRecent").replaceChildren(...S.recentTexts.map(t => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.title = t;
+    if (/[\u0A00-\u0A7F]/.test(t)) b.classList.add("gur");
+    b.onclick = () => sendMsg({ kind: "text", text: t });
+    return b;
+  }));
+  $("msgPics").replaceChildren(...S.recentImages.map(n => {
+    const d = document.createElement("div"); d.className = "pic";
+    const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", "Show this picture");
+    const im = document.createElement("img"); im.src = LOCAL.imageURL(n); im.alt = ""; b.appendChild(im);
+    b.onclick = () => sendMsg({ kind: "image", image: n });
+    const x = document.createElement("button"); x.type = "button"; x.className = "forget"; x.textContent = "\u00d7";
+    x.setAttribute("aria-label", "Remove this picture from the list");
+    x.onclick = () => send({ cmd: "screen_msg", kind: "forget_image", image: n });
+    d.append(b, x); return d;
+  }));
+}
+// a photo from the phone: made smaller first (phone photos are large), as a JPEG the
+// laptop can always show (this also turns an iPhone's HEIC photo into a JPEG)
+function shrink(file) {
+  return new Promise((resolve) => {
+    if (file.type === "image/gif" || (/^image\/(png|jpeg)$/.test(file.type) && file.size < 1.5e6)) { resolve(file); return; }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      const g = c.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => resolve(b || file), "image/jpeg", 0.88);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+$("msgVaheguru").onclick = () => sendMsg({ kind: "vaheguru" });
+$("msgForm").onsubmit = (e) => { e.preventDefault(); const t = $("msgText").value.trim(); if (t) { sendMsg({ kind: "text", text: t }); $("msgText").value = ""; $("msgText").blur(); } };
+$("msgPick").onclick = () => $("msgFile").click();
+$("msgFile").onchange = async () => {
+  const f = $("msgFile").files[0]; $("msgFile").value = "";
+  if (!f) return;
+  banner("Sending the picture\u2026");
+  try {
+    const name = LOCAL.saveImage(await shrink(f));
+    banner(""); sendMsg({ kind: "image", image: name });
+  } catch (e) { banner("That picture could not be used."); }
+};
+$("msgOnBack").onclick = () => send({ cmd: "screen_msg", kind: null });
+["msgScreens", "msgOverlay"].forEach(id => $(id).addEventListener("change", () => {
+  const m = S.msg;                       // a message is up: move it to the screens now ticked
+  if (m) sendMsg(m.kind === "image" ? { kind: "image", image: m.image.split("/").pop() } : { kind: m.kind, text: m.text });
+}));
+
+/* ---------------- tabs, search, history ---------------- */
+function tab(name) {
+  document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  $("tab-now").hidden = name !== "now"; $("tab-search").hidden = name !== "search"; $("tab-history").hidden = name !== "history";
+  $("tab-msg").hidden = name !== "msg";
+  if (name === "search") setTimeout(() => $("q").focus(), 50);
+  scrollTo(0, 0);
+}
+document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => tab(b.dataset.tab));
+const Q = { id: 0, timer: null, mode: "auto", hint: document.getElementById("qHint").textContent };
+function runSearch() {
+  const q = $("q").value.trim();
+  if (!q) { $("results").replaceChildren(); $("qHint").textContent = Q.hint; return; }
+  clearTimeout(Q.timer);
+  Q.timer = setTimeout(() => { Q.id += 1; send({ cmd: "search", q, mode: Q.mode, id: Q.id }, true); }, 250);
+}
+/* English keys type Gurmukhi Unicode, on the SikhiToTheMax (Gurbani Akhar) layout:
+   q = ਤ, t = ਟ, a = ੳ, A = ਅ, e = ੲ, w = ਾ, i = ਿ (typed before its letter, as in SikhiToTheMax),
+   I = ੀ, u = ੁ, U = ੂ, y = ੇ, Y = ੈ, o = ੋ, O = ੌ, M = ੰ, N = ਂ, ` = ੱ, R = ੍ਰ, H = ੍ਹ */
+const STTM = { a: "ੳ", A: "ਅ", e: "ੲ", E: "ਓ", s: "ਸ", S: "ਸ਼", h: "ਹ", k: "ਕ", K: "ਖ", g: "ਗ", G: "ਘ", "|": "ਙ",
+  c: "ਚ", C: "ਛ", j: "ਜ", J: "ਝ", "\\": "ਞ", t: "ਟ", T: "ਠ", f: "ਡ", F: "ਢ", x: "ਣ", q: "ਤ", Q: "ਥ", d: "ਦ", D: "ਧ",
+  n: "ਨ", p: "ਪ", P: "ਫ", b: "ਬ", B: "ਭ", m: "ਮ", X: "ਯ", r: "ਰ", l: "ਲ", v: "ਵ", V: "ੜ", L: "ਲ਼", z: "ਜ਼", Z: "ਗ਼",
+  "^": "ਖ਼", "&": "ਫ਼", w: "ਾ", i: "ਿ", I: "ੀ", u: "ੁ", U: "ੂ", y: "ੇ", Y: "ੈ", o: "ੋ", O: "ੌ", M: "ੰ", N: "ਂ",
+  W: "ਾਂ", "`": "ੱ", "~": "ੱ", R: "੍ਰ", H: "੍ਹ" };
+const LETTER_ONLY = { i: "ੲ", I: "ੲ", u: "ੳ", U: "ੳ", o: "ੳ", O: "ੳ", E: "ੳ" };   // first letters: vowel keys mean their letter
+const CONSONANT = new Set([..."ੲਸਹਕਖਗਘਙਚਛਜਝਞਟਠਡਢਣਤਥਦਧਨਪਫਬਭਮਯਰਲਵੜ\u0A36\u0A59\u0A5A\u0A5B\u0A5E\u0A33"]);
+const PRECOMPOSE = [["ਅਾ", "ਆ"], ["ੲਿ", "ਇ"], ["ੲੀ", "ਈ"], ["ੲੇ", "ਏ"], ["ਅੈ", "ਐ"], ["ੳੁ", "ਉ"], ["ੳੂ", "ਊ"], ["ਅੌ", "ਔ"], ["ੳੋ", "ਓ"]];
+const K = { pend: false, att: false };          // a sihari typed before its letter; one just placed after it
+function sttmType(before, text, letters) {
+  for (const ch of text) {
+    let m = letters ? (LETTER_ONLY[ch] || STTM[ch]) : STTM[ch];
+    if (m === undefined) { before += ch; K.pend = K.att = false; continue; }
+    if (letters && !CONSONANT.has(m) && !"ਅੳਓ".includes(m)) continue;          // no vowel signs among first letters
+    if (m === "ਿ") { before += m; K.pend = true; K.att = false; continue; }
+    if (K.pend && before.endsWith("ਿ") && CONSONANT.has(m)) { before = before.slice(0, -1) + m + "ਿ"; K.pend = false; K.att = true; continue; }
+    if (K.att && before.endsWith("ਿ") && (m === "੍ਰ" || m === "੍ਹ")) { before = before.slice(0, -1) + m + "ਿ"; continue; }
+    before += m; K.pend = K.att = false;
+  }
+  for (const [a, b] of PRECOMPOSE) before = before.split(a).join(b);
+  return before;
+}
+const LATIN = /[A-Za-z`~^&|\\]/;
+function gurmukhiTyping(input, letters, e) {   // on each input event, turn English keys into Gurmukhi where the caret is
+  const v = input.value;
+  if (!LATIN.test(v) || (e && e.isComposing)) return;
+  const end = input.selectionStart ?? v.length;
+  const data = e && e.inputType === "insertText" && e.data ? e.data : null;
+  if (data && end >= data.length && v.slice(end - data.length, end) === data) {
+    const before = sttmType(v.slice(0, end - data.length), data, letters);
+    input.value = before + v.slice(end);
+    input.setSelectionRange(before.length, before.length);
+  } else {                                     // pasted, autocompleted or switched mode: convert it all
+    K.pend = K.att = false;
+    const out = sttmType("", v, letters);
+    input.value = out; input.setSelectionRange(out.length, out.length);
+  }
+}
+const toLetters = (t) => { K.pend = K.att = false; return sttmType("", t, true); };
+function lettersInput(e) {               // Gurmukhi, First letters and Words: English keys type Gurmukhi
+  const mode = Q.mode;
+  if (mode === "latin") return;
+  gurmukhiTyping($("q"), mode === "letters", e);
+}
+const AKHAR = [..."ੳਅੲਸਹਕਖਗਘਙਚਛਜਝਞਟਠਡਢਣਤਥਦਧਨਪਫਬਭਮਯਰਲਵੜ"], PAIR = ["ਸ਼", "ਖ਼", "ਗ਼", "ਜ਼", "ਫ਼"];
+const VOWELS = [..."ਆਇਈਉਊਏਐਓਔ"], SIGNS = [..."ਾਿੀੁੂੇੈੋੌੰਂੱ੍"];
+function buildKeyboard() {
+  const k = $("gkbd"); if (k.childElementCount) return;
+  const key = (ch, label) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label || ch; b.onclick = () => typeKey(ch); return b; };
+  const grid = (list, sign) => { const g = document.createElement("div"); g.className = "keys"; list.forEach(ch => g.appendChild(key(ch, sign ? "\u25CC" + ch : ch))); return g; };
+  const vow = document.createElement("div"); vow.className = "vow";
+  const n = document.createElement("small"); n.textContent = "Vowels and vowel signs (for words)";
+  vow.append(n, grid(VOWELS), grid(SIGNS, true));
+  const row = document.createElement("div"); row.className = "row";
+  [["Space", " "], ["\u232B", "back"], ["Clear", "clear"]].forEach(([l, v]) => row.appendChild(key(v, l)));
+  k.append(grid(AKHAR), grid(PAIR), vow, row);
+  updateKeyboardMode();
+}
+function updateKeyboardMode() { const v = $("gkbd").querySelector(".vow"); if (v) v.hidden = Q.mode === "letters"; }
+function typeKey(ch) {
+  const q = $("q");
+  if (ch === "back") q.value = [...q.value].slice(0, -1).join("");
+  else if (ch === "clear") q.value = "";
+  else q.value += ch;
+  runSearch();
+}
+$("kbdBtn").onclick = () => {
+  const on = $("kbdBtn").getAttribute("aria-pressed") !== "true";
+  $("kbdBtn").setAttribute("aria-pressed", String(on)); buildKeyboard(); $("gkbd").hidden = !on;
+  $("q").setAttribute("inputmode", on ? "none" : "search");      // no phone keyboard over the Gurmukhi one
+  if (on) $("q").blur();
+};
+$("q").addEventListener("input", (e) => { lettersInput(e); runSearch(); });
+$("q").addEventListener("compositionend", () => { lettersInput(); runSearch(); });
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter") $("q").blur(); });
+document.querySelectorAll("[data-q]").forEach(b => b.onclick = () => {
+  Q.mode = b.dataset.q;
+  document.querySelectorAll("[data-q]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  lettersInput(); updateKeyboardMode(); runSearch();
+});
+function item(g, where, en, onPick, time) {
+  const li = document.createElement("li"), b = document.createElement("button"); b.type = "button";
+  const a = document.createElement("span"); a.className = "g"; a.textContent = g;
+  const w = document.createElement("span"); w.className = "w";
+  if (time) { const t = document.createElement("span"); t.className = "t"; t.textContent = time; w.append(t); }
+  w.append(where || "");
+  b.append(a, w);
+  if (en) { const e = document.createElement("span"); e.className = "e"; e.textContent = en.length > 110 ? en.slice(0, 108) + "\u2026" : en; b.append(e); }
+  b.onclick = onPick; li.appendChild(b); return li;
+}
+function renderResults(m) {
+  const items = m.items || [];
+  if (m.mode === "letters") $("qHint").replaceChildren("First letters: ", Object.assign(document.createElement("span"), { className: "letters-preview", textContent: toLetters(m.q || $("q").value) }));
+  else $("qHint").textContent = m.mode === "english" ? "Searching the English translation." : "Searching words.";
+  if (!items.length) { const li = document.createElement("li"); li.className = "small"; li.style.padding = "10px 0"; li.textContent = "Nothing found. Try fewer letters, or another way of searching."; $("results").replaceChildren(li); return; }
+  $("results").replaceChildren(...items.map(it => item(it.g, it.where, it.en, () => {
+    send(it.kind === "bani" ? { cmd: "show", bani_id: it.bani_id, pos: it.pos } : { cmd: "show", sid: it.sid, pos: it.pos });
+    tab("now");
+  })));
+}
+function renderHistory(items) {
+  $("histEmpty").hidden = items.length > 0;
+  $("histList").replaceChildren(...items.map(it => item(it.title, it.where, "", () => {
+    send(it.kind === "bani" ? { cmd: "show", bani_id: it.bani_id } : { cmd: "show", sid: it.sid });
+    tab("now");
+  }, it.time)));
+}
+
+const VERSION = "2026-10-12a";
+function checkVersion(v) {
+  return;                              // the web version updates with the page itself             // a phone page left open from an older version reloads itself
+  if (!v || v === VERSION) return;
+  const u = new URL(location.href);
+  if (u.searchParams.get("v") === v) return;
+  u.searchParams.set("v", v); location.replace(u.toString());
+}
+
+/* ---------------- this phone as the microphone ---------------- */
+const MIC = { id: null, secure: true, httpsPort: null, on: false, owner: null,
+              actx: null, tap: null, stream: null, node: null, pending: [], pendingLen: 0, level: 0, wake: null };
+const TAP_CODE = `class Tap extends AudioWorkletProcessor {
+  constructor() { super(); this.b = new Float32Array(2048); this.n = 0; }
+  process(inputs) { const c = inputs[0] && inputs[0][0];
+    if (c) for (let k = 0; k < c.length; k++) { this.b[this.n++] = c[k];
+      if (this.n === 2048) { this.port.postMessage(this.b.slice(0)); this.n = 0; } }
+    return true; } }
+registerProcessor("tap", Tap);`;
+function downsample(buf, rate) {
+  const ratio = rate / 16000, n = Math.floor(buf.length / ratio), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = Math.floor(i * ratio), b = Math.min(buf.length, Math.floor((i + 1) * ratio));
+    let t = 0; for (let j = a; j < b; j++) t += buf[j];
+    out[i] = t / Math.max(1, b - a);
+  }
+  return out;
+}
+function onAudio(buf) {
+  if (!MIC.on) return;
+  let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+  MIC.level = 0.8 * MIC.level + 0.2 * Math.sqrt(sum / buf.length);
+  $("lvl").style.width = `${Math.min(100, Math.sqrt(MIC.level) * 160)}%`;
+  const chunk = downsample(buf, MIC.actx.sampleRate);
+  MIC.pending.push(chunk); MIC.pendingLen += chunk.length;
+  if (MIC.pendingLen < 8000) return;
+  const all = new Float32Array(MIC.pendingLen); let o = 0;
+  for (const c of MIC.pending) { all.set(c, o); o += c.length; }
+  MIC.pending = []; MIC.pendingLen = 0;
+  if (ws && ws.readyState === 1) ws.send(all.buffer);
+}
+async function startPhoneMic() {
+  if (!MIC.actx) {
+    MIC.actx = new (window.AudioContext || window.webkitAudioContext)();
+    const mute = MIC.actx.createGain(); mute.gain.value = 0; mute.connect(MIC.actx.destination);
+    if (MIC.actx.audioWorklet) {
+      await MIC.actx.audioWorklet.addModule(URL.createObjectURL(new Blob([TAP_CODE], { type: "text/javascript" })));
+      MIC.tap = new AudioWorkletNode(MIC.actx, "tap"); MIC.tap.port.onmessage = (e) => onAudio(e.data);
+    } else {
+      MIC.tap = MIC.actx.createScriptProcessor(4096, 1, 1); MIC.tap.onaudioprocess = (e) => onAudio(e.inputBuffer.getChannelData(0));
+    }
+    MIC.tap.connect(mute);
+  }
+  if (MIC.actx.state === "suspended") await MIC.actx.resume();
+  MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  MIC.node = MIC.actx.createMediaStreamSource(MIC.stream); MIC.node.connect(MIC.tap);
+  MIC.on = true; MIC.pending = []; MIC.pendingLen = 0;
+  MIC.stream.getAudioTracks()[0].onended = () => { stopPhoneMic(true); banner("This phone's microphone stopped (another app may have taken it). Tap Start listening again."); };
+  try { if ("wakeLock" in navigator) MIC.wake = await navigator.wakeLock.request("screen"); } catch (e) { /* not available */ }
+  send({ cmd: "mic_take" });
+  $("listenPrompt").hidden = true;
+  renderMic();
+}
+function stopPhoneMic(tellConsole) {
+  if (MIC.node) MIC.node.disconnect();
+  if (MIC.stream) MIC.stream.getTracks().forEach(t => t.stop());
+  MIC.node = MIC.stream = null; MIC.on = false; MIC.level = 0; $("lvl").style.width = "0";
+  if (MIC.wake) { MIC.wake.release().catch(() => {}); MIC.wake = null; }
+  if (tellConsole) send({ cmd: "mic_release" });
+  renderMic();
+}
+function renderMic() {
+  $("listen").setAttribute("aria-pressed", String(MIC.on));
+  $("listen").firstChild.textContent = MIC.on ? "Stop listening" : "Start listening";
+  $("micLine").textContent = MIC.on ? "Listening with this phone's microphone. Keep this page open and the phone unlocked." : "";
+}
+$("listen").onclick = async () => {
+  if (MIC.on) { stopPhoneMic(true); return; }
+  if (LOCAL.player) stopTry();
+  try { await startPhoneMic(); }
+  catch (e) { stopPhoneMic(false); banner("The microphone couldn't be opened. In Safari, tap aA in the address bar, then Website Settings, and allow the Microphone; then try again."); }
+};
+$("secureGo").onclick = () => { location.href = `https://${location.hostname}:${MIC.httpsPort}/phone?listen=1`; };
+$("secureClose").onclick = () => { $("secureSheet").hidden = true; };
+if (MIC.secure && new URLSearchParams(location.search).get("listen") === "1") $("listenPrompt").hidden = false;
+
+/* ---------------- casting (the laptop casts; this phone chooses) ---------------- */
+$("castBtn").onclick = () => {
+  const open = $("castSheet").hidden;
+  $("castSheet").hidden = !open;
+  if (open) { tab("now"); send({ cmd: "cast_scan" }, true); }
+};
+$("castClose").onclick = () => { $("castSheet").hidden = true; };
+$("castStop").onclick = () => send({ cmd: "cast_stop" });
+function renderCast(m) {
+  const a = m.active;
+  $("castBtn").classList.toggle("on", !!a && a.mode !== "starting");
+  $("castNow").hidden = !a;
+  if (a) $("castNowText").textContent = a.mode === "starting" ? `Starting on ${a.name}\u2026 (up to half a minute)`
+    : `Casting to ${a.name}` + (a.mode === "pictures" ? " (a picture of each line)" : "");
+  const devs = m.devices || [];
+  $("castList").replaceChildren(...devs.map(d => {
+    const li = document.createElement("li"), b = document.createElement("button"); b.type = "button";
+    b.textContent = d.name; const sm = document.createElement("small");
+    sm.textContent = a && a.uuid === d.uuid ? "Showing the display now" : (d.model || "Chromecast"); b.appendChild(sm);
+    b.onclick = () => send({ cmd: "cast_start", uuid: d.uuid });
+    li.appendChild(b); return li;
+  }));
+  $("castNote").textContent = !m.available ? "Casting isn't available on this computer."
+    : m.error ? m.error
+    : devs.length ? "Pick one. The laptop does the casting, so this phone can go back to controlling."
+    : "Looking for Chromecasts on the laptop's Wi-Fi\u2026 Make sure the TV is on.";
+}
+
+var receive = function (m) {
+  if (m.type === "cast") renderCast(m);
+  if (m.type === "screen_msg") { S.msg = m.msg; S.recentImages = m.recent_images || []; S.recentTexts = m.recent_texts || []; renderMsg(); }
+  if (m.type === "notice" && m.message) { const msg = m.message; banner(msg); setTimeout(() => { if ($("banner").textContent === msg) banner(""); }, 15000); }
+  if (m.type === "you") { MIC.id = m.id; }
+  if (m.type === "mic") {
+    MIC.owner = m; MIC.httpsPort = m.https_port;
+    if (MIC.on && m.owner_id !== MIC.id) { stopPhoneMic(false); banner(m.owner === "phone" ? `${m.name} is now the microphone.` : "The laptop's microphone took over."); }
+    renderMic();
+  }
+  if (m.type === "mic_lost") { stopPhoneMic(false); banner("This phone stopped sending sound, so the laptop's microphone took over. Keep this page open and the phone unlocked while it listens."); }
+  if (m.type === "hello" || m.type === "loading") checkVersion(m.version);
+  if (m.type === "hello") {
+    S.banis = m.banis || [];
+    const sel = $("bani");
+    sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
+    S.banis.forEach(b => { const o = document.createElement("option"); o.value = b.id; o.textContent = `${b.name}  ${b.name_gurmukhi}`; sel.appendChild(o); });
+  } else if (m.type === "history") renderHistory(m.items || []);
+  else if (m.type === "search_results") { if (m.id === Q.id) renderResults(m); }
+  else if (m.type === "track") S.tracks[m.track.id] = m.track;
+  else if (m.type === "state") S.state = m;
+  else if (m.type === "loading") $("statusText").textContent = "Getting ready";
+}
+
+function connect() {
+  ws = new LOCAL.Socket("local");
+  ws.onopen = () => { banner(""); disconnected = false; };
+  ws.onmessage = (ev) => { receive(JSON.parse(ev.data)); render(); };
+  ws.onclose = (ev) => {
+    if (ev.code === 4003) { disconnected = true; banner("The console disconnected this phone."); }
+    else if (!disconnected) banner("Lost the connection to the console. Reconnecting\u2026 Check this phone is on the same Wi-Fi as the computer.");
+    $("statusText").textContent = "Not connected";
+    setTimeout(connect, 2500);
+  };
+}
+
+$("hold").onclick = () => send({ cmd: "hold", on: $("hold").getAttribute("aria-pressed") !== "true" });
+$("back").onclick = () => send({ cmd: "step", delta: -1 });
+$("fwd").onclick = () => send({ cmd: "step", delta: 1 });
+let armed = null;
+$("reset").onclick = () => {
+  if (armed) { clearTimeout(armed); armed = null; $("reset").classList.remove("armed"); $("reset").textContent = "Start over"; send({ cmd: "reset" }); return; }
+  $("reset").classList.add("armed"); $("reset").textContent = "Tap again to start over";
+  armed = setTimeout(() => { armed = null; $("reset").classList.remove("armed"); $("reset").textContent = "Start over"; }, 3000);
+};
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () =>
+  send({ cmd: "mode", mode: b.dataset.mode, bani_id: b.dataset.mode === "paath" ? ($("bani").value || null) : null,
+         sehaj: b.dataset.mode === "paath" && $("sehaj").checked }));
+$("bani").onchange = () => send({ cmd: "mode", mode: "paath", bani_id: $("bani").value || null, sehaj: false });
+$("sehaj").onchange = () => send({ cmd: "mode", mode: "paath", bani_id: null, sehaj: $("sehaj").checked });
+$("akvOn").onchange = () => send({ cmd: "akv", action: $("akvOn").checked ? "start" : "end" });
+$("akvResume").onclick = () => send({ cmd: "akv", action: "resume" });
+$("akvNext").onclick = () => send({ cmd: "akv", action: "next" });
+$("akvEnd").onclick = () => send({ cmd: "akv", action: "end" });
+$("akvSugBtn").onclick = () => send({ cmd: "akv", action: "start" });
+
+connect();
+render();
+
+/* ---------------- web version: start-up, sangat screen, recordings ---------------- */
+function pctOf(text) { const m = /(\d+)%/.exec(text || ""); return m ? +m[1] : null; }
+function renderStart() {
+  const L = LOCAL;
+  const row = (who, bar, txt, rowId) => {
+    const done = L.ready[who], t = done ? "Ready" : L.progress[who];
+    $(txt).textContent = t; $(rowId).classList.toggle("done", done);
+    const p = done ? 100 : pctOf(t);
+    $(bar).style.width = (p === null ? (t === "Waiting" ? 2 : 50) : p) + "%";
+  };
+  row("asr", "barAsr", "txtAsr", "rowAsr"); row("engine", "barEng", "txtEng", "rowEng");
+  $("startErr").hidden = !L.error; $("startErr").textContent = L.error || "";
+  const ready = L.ready.asr && L.ready.engine;
+  $("startBox").hidden = ready && !L.error;
+  $("listen").disabled = !ready;
+  $("tryPick").disabled = !ready;
+}
+LOCAL.on((kind) => { if (kind === "progress" || kind === "ready" || kind === "error") renderStart(); });
+renderStart();
+
+function stopTry() { LOCAL.stopFile(); $("tryStop").hidden = true; $("tryPick").hidden = false; $("tryNote").hidden = true; }
+$("tryPick").onclick = () => $("tryFile").click();
+$("tryStop").onclick = stopTry;
+$("tryFile").onchange = async () => {
+  const f = $("tryFile").files[0]; $("tryFile").value = "";
+  if (!f) return;
+  if (MIC.on) stopPhoneMic(true);
+  $("tryNote").hidden = false; $("tryNote").textContent = "Reading the recording…";
+  try {
+    const pl = await LOCAL.playFile(f, () => { stopTry(); banner("The recording has finished."); });
+    $("tryPick").hidden = true; $("tryStop").hidden = false;
+    const tick = setInterval(() => {
+      if (!LOCAL.player) { clearInterval(tick); return; }
+      const s = Math.floor(LOCAL.player.pos), d = Math.floor(pl.duration);
+      $("tryNote").textContent = `Playing ${f.name} through the app: ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} of ${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")} (silently)`;
+    }, 1000);
+  } catch (e) { $("tryNote").textContent = "That file couldn't be read. Try an MP3, M4A or WAV."; }
+};
+
+function renderSangat() {
+  if ($("sangat").hidden) return;
+  const st = S.state, m = S.msg;
+  const track = st && st.track_id ? S.tracks[st.track_id] : null;
+  const pos = st ? (st.pos !== null && st.pos !== undefined ? st.pos : st.last_pos) : null;
+  const body = $("sgBody");
+  if (m && m.screens) {
+    body.replaceChildren();
+    if (m.kind === "image") { const im = document.createElement("img"); im.src = m.image; im.alt = ""; body.append(im); }
+    else { const p = document.createElement("p"); p.className = m.kind === "vaheguru" ? "msg" : (/[਀-੿]/.test(m.text) ? "msg" : "msgtext"); p.textContent = m.text; body.append(p); }
+    $("sgWhere").textContent = "";
+    return;
+  }
+  if (!$("sgG")) body.innerHTML = '<p class="g" id="sgG"></p><p class="en" id="sgEn"></p><p class="nx" id="sgNx"></p>';
+  if (!track || pos === null || pos === undefined) { $("sgG").textContent = "ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥"; $("sgEn").textContent = ""; $("sgNx").textContent = ""; $("sgWhere").textContent = ""; return; }
+  const Ls = track.lines, line = Ls[pos] || {};
+  const np = st.next_pos !== undefined && st.next_pos !== null ? st.next_pos : (pos + 1 < Ls.length ? pos + 1 : null);
+  const set = SETTINGS_WEB();
+  $("sgG").textContent = line.g || "";
+  $("sgEn").textContent = set.en === false ? "" : (line.en || "");
+  $("sgNx").textContent = set.next === false || np === null || !Ls[np] ? "" : Ls[np].g;
+  $("sgWhere").textContent = [line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.kind === "bani" ? track.subtitle : ""].filter(Boolean).join(" · ");
+}
+let WEB_SETTINGS = {};
+const SETTINGS_WEB = () => WEB_SETTINGS;
+LOCAL.on(() => {});
+const _recv = receive;
+receive = function (m) { if (m.type === "settings") WEB_SETTINGS = m.settings || {}; _recv(m); };
+const _render = render;
+render = function () { _render(); renderSangat(); };
+let wake = null;
+$("screenBtn").onclick = async () => {
+  $("sangat").hidden = false; renderSangat();
+  try { if ("wakeLock" in navigator && !wake) wake = await navigator.wakeLock.request("screen"); } catch (e) { /* not offered */ }
+};
+$("sgClose").onclick = () => { $("sangat").hidden = true; if (wake && !MIC.on) { wake.release().catch(() => {}); wake = null; } };
+})();
+</script>
+</body>
+</html>
