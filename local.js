@@ -7,13 +7,13 @@
   "use strict";
   const P = new URLSearchParams(location.search);
   const here = (p) => new URL(p, location.href).href;
-  const BUILD = "2026-10-12b";             // in every file name the page asks for: no old copies mixed in
+  const BUILD = "2026-10-12c";             // in every file name the page asks for: no old copies mixed in
   const CFG = {
     build: BUILD,
     pyodide: P.has("local") ? here("vendor/pyodide/") : "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     ort: P.has("local") ? here("vendor/ort/") : "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/",
     model: P.get("model") ? here(P.get("model"))
-      : "https://huggingface.co/karansea/indicconformer-stt-pa-ctc-shabad-preview/resolve/main/v4.int8.onnx",
+      : "https://huggingface.co/karansea/indicconformer-stt-pa-ctc-shabad-preview/resolve/main/model.int8.onnx",   // the laptop app's v4.int8.onnx, by its Hugging Face name
     vocab: here("vocab.json?v=" + BUILD),
     app: here("app.zip?v=" + BUILD),
   };
