@@ -2,7 +2,7 @@
 
 The iPhone / web version of Gurbani Audio Searcher (beta testing). Open it in Safari:
 
-**https://misterbgt.github.io/testcheej/**
+**https://misterbgt.github.io/Testcheej/**
 
 It listens with the phone's microphone and shows the shabad or bani being sung or read,
 like the laptop app, with no laptop. Everything runs on the phone: the speech model and the
