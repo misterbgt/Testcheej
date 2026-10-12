@@ -26,7 +26,7 @@ Tip: Share → Add to Home Screen gives it its own icon.
 
 - `index.html`: the page (the laptop app's phone controller, made by `src/make_index.py`).
 - `local.js`: connects the page to the two workers below instead of the laptop.
-- `asr-worker.js`: the speech model (onnxruntime-web), loaded from Karanbir Singh's
+- `asr-worker.js`: the speech model (onnxruntime-web 1.18, the build without shared memory), loaded from Karanbir Singh's
   Hugging Face page and kept in the phone's cache.
 - `engine-worker.js`, `engine-core.js`, `app.zip`: the laptop app's Python engine
   (`engine/`, `engine_ext/`, `src/web_hub.py`) and Gurbani data, run with Pyodide.

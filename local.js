@@ -7,11 +7,11 @@
   "use strict";
   const P = new URLSearchParams(location.search);
   const here = (p) => new URL(p, location.href).href;
-  const BUILD = "2026-10-12c";             // in every file name the page asks for: no old copies mixed in
+  const BUILD = "2026-10-12d";             // in every file name the page asks for: no old copies mixed in
   const CFG = {
     build: BUILD,
     pyodide: P.has("local") ? here("vendor/pyodide/") : "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
-    ort: P.has("local") ? here("vendor/ort/") : "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/",
+    ort: P.has("local") ? here("vendor/ort118/") : "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/",
     model: P.get("model") ? here(P.get("model"))
       : "https://huggingface.co/karansea/indicconformer-stt-pa-ctc-shabad-preview/resolve/main/model.int8.onnx",   // the laptop app's v4.int8.onnx, by its Hugging Face name
     vocab: here("vocab.json?v=" + BUILD),
@@ -23,7 +23,7 @@
   };
 
   const L = {
-    cfg: CFG, clients: new Set(), ready: { asr: false, engine: false }, progress: { asr: "Waiting", engine: "Waiting" },
+    cfg: CFG, clients: new Set(), ready: { asr: false, engine: false }, progress: { asr: "Waiting", engine: "Starts once the speech model is ready" },
     error: null, images: new Map(), last: { track: null, state: null }, listeners: new Set(), stats: {},
   };
   window.LOCAL = L;
@@ -32,16 +32,16 @@
   L.on = (f) => { L.listeners.add(f); return () => L.listeners.delete(f); };
 
   // ---------------------------------------------------------------- workers
-  const asr = new Worker("asr-worker.js?v=" + BUILD, { type: "module" }), engine = new Worker("engine-worker.js?v=" + BUILD);
+  const asr = new Worker("asr-worker.js?v=" + BUILD), engine = new Worker("engine-worker.js?v=" + BUILD);
   asr.onmessage = (ev) => {
     const m = ev.data;
     if (m.type === "progress") { L.progress.asr = m.text; emit("progress", { who: "asr", ...m }); }
-    else if (m.type === "ready") { L.ready.asr = true; L.progress.asr = "Ready"; L.stats.warmMs = m.warmMs; emit("ready", { who: "asr" }); }
+    else if (m.type === "ready") { L.ready.asr = true; L.progress.asr = "Ready"; L.stats.warmMs = m.warmMs; emit("ready", { who: "asr" }); startEngine(); }
     else if (m.type === "words") {
       L.stats.asrMs = m.ms; L.stats.hop = m.hop; L.lastWords = m;
       emit("words", m);
       if (L.ready.engine) engine.postMessage(m);
-    } else if (m.type === "error") { fail(m.text); }
+    } else if (m.type === "error") { fail(m.text); startEngine(); }
     else if (m.type === "note") { notice(m.text); }
     else if (m.type === "stats") emit("stats", m);
   };
@@ -65,8 +65,14 @@
   function fail(text) { L.error = text; emit("error", text); broadcast([{ type: "notice", message: text }]); }
   function notice(text) { broadcast([{ type: "notice", message: text }]); }
 
+  // one after the other, so the phone never holds both while they start (the peak is what runs out)
+  let engineStarted = false;
+  function startEngine() {
+    if (engineStarted) return;
+    engineStarted = true;
+    engine.postMessage({ type: "init", cfg: { ...CFG, settings: store.get("gas-settings", {}), texts: store.get("gas-texts", []) } });
+  }
   asr.postMessage({ type: "init", cfg: CFG });
-  engine.postMessage({ type: "init", cfg: { ...CFG, settings: store.get("gas-settings", {}), texts: store.get("gas-texts", []) } });
 
   // ---------------------------------------------------------------- the page's "websocket"
   function broadcast(msgs) {

@@ -7,8 +7,9 @@
 // newest hearing wins, except at its first LEFT seconds, which it heard with little
 // before them), and the last 20, 10 and 4.5 seconds are read off that timeline as words,
 // as the laptop app reads its 20, 10 and 4.5 second windows.
-// (A module worker: onnxruntime-web is imported as an ES module, which Safari supports in
-// module workers.)
+// onnxruntime-web 1.18, the last with a build that does not use shared memory: on iPhone,
+// Safari cannot set aside the shared memory the newer builds ask for ("Out of memory").
+"use strict";
 const SR = 16000, FR = 640, BLANK = 256;
 const WIN = 8.0, HOP_MIN = 1.5, LEFT = 1.0, KEEP_S = 40;
 let ORT = null, session = null, pieces = null, kind = null;
@@ -51,14 +52,18 @@ async function getModel(url) {
 }
 
 async function init(cfg) {
-  ORT = await import(cfg.ort + "ort.wasm.min.mjs");
+  importScripts(cfg.ort + "ort.wasm.min.js");
+  ORT = self.ort;
   ORT.env.wasm.wasmPaths = cfg.ort;
-  ORT.env.wasm.numThreads = 1;
+  ORT.env.wasm.numThreads = 1;                 // ort-wasm-simd.wasm: no threads, no shared memory
+  ORT.env.wasm.proxy = false;
   const v = await (await fetch(cfg.vocab)).json();
   pieces = v.pieces; kind = v.kind;
   let bytes = await getModel(cfg.model);
   say("Starting the speech model");
-  session = await ORT.InferenceSession.create(bytes, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+  // no memory arena or memory patterns: a little slower, but much less memory at the peak
+  session = await ORT.InferenceSession.create(bytes, { executionProviders: ["wasm"], graphOptimizationLevel: "all",
+                                                        enableCpuMemArena: false, enableMemPattern: false });
   bytes = null;
   // one short hearing to warm it up (and time it)
   const t0 = performance.now();
