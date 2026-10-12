@@ -7,13 +7,15 @@
   "use strict";
   const P = new URLSearchParams(location.search);
   const here = (p) => new URL(p, location.href).href;
+  const BUILD = "2026-10-12b";             // in every file name the page asks for: no old copies mixed in
   const CFG = {
+    build: BUILD,
     pyodide: P.has("local") ? here("vendor/pyodide/") : "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     ort: P.has("local") ? here("vendor/ort/") : "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/",
     model: P.get("model") ? here(P.get("model"))
       : "https://huggingface.co/karansea/indicconformer-stt-pa-ctc-shabad-preview/resolve/main/v4.int8.onnx",
-    vocab: here("vocab.json"),
-    app: here("app.zip"),
+    vocab: here("vocab.json?v=" + BUILD),
+    app: here("app.zip?v=" + BUILD),
   };
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -30,7 +32,7 @@
   L.on = (f) => { L.listeners.add(f); return () => L.listeners.delete(f); };
 
   // ---------------------------------------------------------------- workers
-  const asr = new Worker("asr-worker.js", { type: "module" }), engine = new Worker("engine-worker.js");
+  const asr = new Worker("asr-worker.js?v=" + BUILD, { type: "module" }), engine = new Worker("engine-worker.js?v=" + BUILD);
   asr.onmessage = (ev) => {
     const m = ev.data;
     if (m.type === "progress") { L.progress.asr = m.text; emit("progress", { who: "asr", ...m }); }

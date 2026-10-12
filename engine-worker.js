@@ -9,25 +9,29 @@ const say = (text, extra) => post(Object.assign({ type: "progress", text }, extr
 async function fetchBytes(url, label) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`${label} could not be downloaded (HTTP ${r.status})`);
+  // the size header is only a guide: a server that compresses (GitHub Pages does) gives the
+  // compressed size, while the browser hands over the uncompressed bytes
   const size = +r.headers.get("content-length") || 0;
-  if (!size || !r.body) return new Uint8Array(await r.arrayBuffer());
-  const reader = r.body.getReader(), out = new Uint8Array(size);
+  if (!r.body) return new Uint8Array(await r.arrayBuffer());
+  const reader = r.body.getReader(), parts = [];
   let got = 0, shown = -1;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    if (got + value.length > out.length) return new Uint8Array(await new Blob([out.subarray(0, got), value]).arrayBuffer());
-    out.set(value, got); got += value.length;
-    const pct = Math.floor(100 * got / size);
-    if (pct !== shown && pct % 5 === 0) { shown = pct; say(`Downloading ${label}: ${pct}%`); }
+    parts.push(value); got += value.length;
+    const pct = size ? Math.min(99, Math.floor(100 * got / size)) : -1;
+    if (pct >= 0 && pct !== shown && pct % 5 === 0) { shown = pct; say(`Downloading ${label}: ${pct}%`); }
   }
-  return out.subarray(0, got);
+  const out = new Uint8Array(got);
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
 }
 
 async function init(cfg) {
-  importScripts(cfg.pyodide + "pyodide.js", "rfjs.js", "engine-core.js");
+  importScripts(cfg.pyodide + "pyodide.js", "rfjs.js?v=" + cfg.build, "engine-core.js?v=" + cfg.build);
   say("Downloading the Gurbani data");
-  const [appZip, rfWasm] = await Promise.all([fetchBytes(cfg.app, "the Gurbani data"), fetchBytes("rf.wasm", "the word matching")]);
+  const [appZip, rfWasm] = await Promise.all([fetchBytes(cfg.app, "the Gurbani data"), fetchBytes("rf.wasm?v=" + cfg.build, "the word matching")]);
   eng = await self.startEngine({ loadPyodide: self.loadPyodide, indexURL: cfg.pyodide, rfjs: self.rfjs, rfWasm, appZip,
                                  settings: cfg.settings, texts: cfg.texts, say });
   post({ type: "ready", loadS: eng.loadS });

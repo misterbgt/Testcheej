@@ -235,7 +235,7 @@ $("sgClose").onclick = () => { $("sangat").hidden = true; if (wake && !MIC.on) {
 # the page's own functions are declared with "function": allow them to be wrapped above
 s = s.replace("function receive(m) {", "var receive = function (m) {", 1)
 s = s.replace("function render() {", "var render = function () {", 1)
-sub('<script>\n(() => {', '<script src="local.js"></script>\n<script>\n(() => {')
+sub('<script>\n(() => {', '<script src="local.js?v=2026-10-12b"></script>\n<script>\n(() => {')
 
 open(OUT, "w", encoding="utf-8").write(s)
 print("wrote", OUT, len(s))
