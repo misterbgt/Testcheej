@@ -43,6 +43,12 @@ Version ਅ੩ (build 2026-10-13b), the same as the laptop app.
 
 Everything here is built by `src/build.py` from the app's source (its `web/` folder).
 
+**Sound test (web only, 2026-10-13):** `index.html` has a trial of a sound picture, added
+here directly and not yet in the app's source (`pages/phone.html`): the logo grows and
+shrinks with the sound, and a strip on the Now tab shows how loud it has been since the page
+opened (one number every 0.1 s; no sound is kept), coloured by what the app was doing, with a
+mark wherever the screen moved to another shabad. Settings → Sound turns either off.
+
 ## Credits and licence
 
 Built on the kirtan-captioning project and speech model by Karanbir Singh
