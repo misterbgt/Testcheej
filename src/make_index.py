@@ -1,18 +1,19 @@
 """Make the web version's page (site/index.html) from the laptop app's phone controller
-(phone.html): the same page, talking to this phone's own engine (local.js) instead of
+(pages/phone.html): the same page, talking to this phone's own engine (local.js) instead of
 the laptop, listening with this phone's microphone, with a start-up panel, a full-screen
-sangat screen and a way to try a recording."""
-import re
+sangat screen and a way to try a recording. Each change below must find its place in
+phone.html, or the build stops (so a change to phone.html can't silently break the web page).
+
+usage: python make_index.py PHONE_HTML OUT_HTML VERSION VERSION_NAME   (build.py runs it)"""
 import sys
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else "/home/claude/w/phone.html"
-OUT = sys.argv[2] if len(sys.argv) > 2 else "/home/claude/webapp/site/index.html"
-s = open(SRC, encoding="utf-8").read()
+SRC, OUT, VERSION, VERSION_NAME = sys.argv[1:5]
+s = open(SRC, encoding="utf-8").read().replace("__VERSION_NAME__", VERSION_NAME).replace("__VERSION__", VERSION)
 
 
 def sub(old, new, count=1):
     global s
-    assert s.count(old) >= 1, f"not found: {old[:80]}"
+    assert s.count(old) >= 1, f"not found in phone.html: {old[:80]}"
     s = s.replace(old, new, count)
 
 
@@ -235,7 +236,7 @@ $("sgClose").onclick = () => { $("sangat").hidden = true; if (wake && !MIC.on) {
 # the page's own functions are declared with "function": allow them to be wrapped above
 s = s.replace("function receive(m) {", "var receive = function (m) {", 1)
 s = s.replace("function render() {", "var render = function () {", 1)
-sub('<script>\n(() => {', '<script src="local.js?v=2026-10-12d"></script>\n<script>\n(() => {')
+sub('<script>\n(() => {', f'<script src="local.js?v={VERSION}"></script>\n<script>\n(() => {{')
 
 open(OUT, "w", encoding="utf-8").write(s)
 print("wrote", OUT, len(s))

@@ -24,15 +24,20 @@ Tip: Share → Add to Home Screen gives it its own icon.
 
 ## What is here
 
+Version ਅ੨ (build 2026-10-13a), the same as the laptop app.
+
 - `index.html`: the page (the laptop app's phone controller, made by `src/make_index.py`).
 - `local.js`: connects the page to the two workers below instead of the laptop.
 - `asr-worker.js`: the speech model (onnxruntime-web 1.18, the build without shared memory), loaded from Karanbir Singh's
   Hugging Face page and kept in the phone's cache.
 - `engine-worker.js`, `engine-core.js`, `app.zip`: the laptop app's Python engine
-  (`engine/`, `engine_ext/`, `src/web_hub.py`) and Gurbani data, run with Pyodide.
+  (`engine/`, `engine_ext/`, and `app/core.py`, the part of the app the web version
+  shares with it), `src/web_hub.py` and the Gurbani data, run with Pyodide.
 - `rf.wasm`, `rfjs.js`: rapidfuzz's C++ scorers compiled to WebAssembly
-  (`src/rfwasm.cpp`), for the engine's word matching (`src/rapidfuzz/`).
+  (`src/rfwasm.cpp`, built by `src/build_rf.sh`), for the engine's word matching (`src/rapidfuzz/`).
 - `vocab.json`: the speech model's word pieces.
+
+Everything here is built by `src/build.py` from the app's source (its `web/` folder).
 
 ## Credits and licence
 

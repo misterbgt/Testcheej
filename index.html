@@ -209,7 +209,7 @@ ol { list-style: none; margin: 0; padding: 0; }
 <body>
 <header class="top">
   <img class="logo" src="logo64.png" alt="" width="32" height="32">
-  <div class="appname">Gurbani Audio Searcher <span class="beta">(beta testing)</span> <span class="ver">ਅ੧</span></div>
+  <div class="appname">Gurbani Audio Searcher <span class="beta">(beta testing)</span> <span class="ver">ਅ੨</span></div>
   <div class="status" id="status" data-group="find" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="statusText">Getting ready</span></div>
   <div class="seg" role="group" aria-label="What is happening">
     <button type="button" data-mode="kirtan" aria-pressed="true">Kirtan</button>
@@ -355,7 +355,7 @@ ol { list-style: none; margin: 0; padding: 0; }
   <button type="button" class="btn reset" id="reset">Start over</button>
 </nav>
 
-<script src="local.js?v=2026-10-12d"></script>
+<script src="local.js?v=2026-10-13a"></script>
 <script>
 (() => {
 "use strict";
@@ -672,7 +672,7 @@ function renderHistory(items) {
   }, it.time)));
 }
 
-const VERSION = "2026-10-12a";
+const VERSION = "2026-10-13a";
 function checkVersion(v) {
   return;                              // the web version updates with the page itself             // a phone page left open from an older version reloads itself
   if (!v || v === VERSION) return;
