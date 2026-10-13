@@ -4,14 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0F1A30">
-<title>Gurbani Audio Searcher</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Gurbani">
-<link rel="apple-touch-icon" href="logo.png">
+<title>Gurbani Audio Searcher (beta testing)</title>
 <link rel="icon" href="logo64.png">
+<link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Mukta+Mahee:wght@400;500;600;700&family=Tiro+Gurmukhi&display=swap" rel="stylesheet">
+<!--
+  The phone controller. Opened from the laptop app (/phone) it controls the console over
+  the Wi-Fi. The web version (iPhone, no laptop) is this same page with local.js loaded
+  before it (web/make_index.py): then window.LOCAL stands in for the laptop, and the parts
+  marked "web" below appear (getting ready, the sangat screen, settings, a recording).
+-->
 <style>
 :root {
   --bg: #EDF1F7; --panel: #FFFFFF; --ink: #14213D; --muted: #56647F; --rule: #D3DBE8;
@@ -38,83 +44,95 @@
 *, *::before, *::after { box-sizing: inherit; }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.5 var(--ui); -webkit-tap-highlight-color: transparent; }
-button, select { font: inherit; color: inherit; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--kesri); outline-offset: 2px; }
 .gur { font-family: var(--gur); }
 [hidden] { display: none !important; }
-
-.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 3; background: var(--bg); display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
-.status { display: flex; align-items: center; gap: 8px; font-weight: 600; flex: 1; min-width: 0; }
-.status span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c, var(--kesri)); flex: none; }
 [data-group] { --c: var(--kesri); }
 [data-group="follow"] { --c: var(--follow); }
 [data-group="hold"] { --c: var(--hold); }
 [data-group="lost"] { --c: var(--lost); }
-.seg { display: inline-flex; background: var(--btn); border-radius: 10px; padding: 3px; }
-.seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 8px; font-weight: 500; min-height: 40px; }
+
+/* ---------------- top: status and menu; what is happening ---------------- */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 3; background: var(--bg); display: grid; gap: 10px;
+       padding: 10px 16px 12px; border-bottom: 1px solid var(--rule); }
+.row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.logo { width: 30px; height: 30px; flex: none; }
+.status { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; background: var(--panel);
+          border: 1px solid var(--rule); border-radius: 18px; padding: 5px 12px; line-height: 1.3; }
+.status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+#statusText { font-weight: 600; font-size: 16px; }
+.status .sub { color: var(--muted); font-size: 14px; white-space: nowrap; }
+.status .sub:empty { display: none; }
+.status .sub::before { content: "· "; }
+.iconbtn { width: 44px; height: 44px; border: 0; background: var(--btn); color: var(--btn-ink); border-radius: 10px; display: grid; place-items: center; flex: none; position: relative; }
+.iconbtn .on-dot { position: absolute; top: 6px; right: 6px; }
+.seg { display: inline-flex; background: var(--btn); border-radius: 10px; padding: 3px; flex: none; }
+.seg button { border: 0; background: transparent; padding: 0 12px; border-radius: 8px; font-weight: 500; min-height: 38px; font-size: 16px; }
 .seg button[aria-pressed="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
-.sehaj { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; min-height: 40px; padding: 0 10px; border-radius: 10px; }
-.sehaj:has(input:checked) { background: var(--btn); }
-.sehaj input { width: 20px; height: 20px; margin: 0; accent-color: var(--kesri); }
-select { width: 100%; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
+.opt { flex: 1 1 0; min-width: 0; display: flex; }
+.optchip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+           border-radius: 10px; padding: 0 10px; min-height: 44px; font-weight: 600; font-size: 15px; white-space: nowrap; max-width: 100%; }
+.optchip .tick { width: 15px; height: 15px; border-radius: 4px; border: 2px solid var(--muted); display: inline-grid; place-items: center; flex: none; }
+.optchip[aria-pressed="true"] { border-color: var(--kesri); color: var(--kesri); }
+.optchip[aria-pressed="true"] .tick { background: var(--kesri); border-color: var(--kesri); }
+.optchip[aria-pressed="true"] .tick::after { content: ""; width: 7px; height: 4px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+select.optchip { width: 100%; font-weight: 500; text-overflow: ellipsis; }
 
-main { padding: 16px 16px calc(230px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 22px; }
-#tab-now { display: grid; gap: 22px; }
-.now { border-left: 6px solid var(--c); padding: 2px 0 4px 14px; }
-.title { font-size: 16px; color: var(--muted); line-height: 1.5; }
-.cur { font-size: 28px; line-height: 1.5; margin: 6px 0 0; }
-.next { font-size: 18px; color: var(--muted); margin: 8px 0 0; line-height: 1.55; }
-.where { color: var(--muted); font-size: 14px; margin-top: 6px; }
-.empty { color: var(--muted); }
-h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
-.card { border: 1px solid var(--kesri); border-radius: 14px; padding: 14px; background: var(--panel); }
-/* Asa Ki Vaar: where the Vaar has reached (the sangat screens show just the Gurbani) */
-.akv { display: grid; gap: 10px; }
-.akv h2 { display: flex; justify-content: space-between; align-items: baseline; margin: 0; font-size: 15px; }
-.akv h2 .gur { font-size: 18px; font-weight: 400; }
-.akv-strip { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
-.akv-strip button { min-height: 38px; padding: 0; border-radius: 8px; border: 1px solid var(--rule); background: transparent; color: var(--ink);
-                    font: 400 18px/1 var(--gur); }
-.akv-strip button.done { color: var(--muted); background: var(--btn); }
-.akv-strip button[aria-current="true"] { background: var(--kesri); border-color: var(--kesri); color: #fff; }
-.akv-parts { display: flex; gap: 6px; }
-.akv-parts span { flex: 1; text-align: center; padding: 6px 0; border-radius: 9px; border: 1px solid var(--rule); font: 400 18px/1.2 var(--gur); color: var(--muted); }
-.akv-parts span.on { border-color: var(--kesri); color: var(--ink); font-weight: 600; box-shadow: inset 0 -3px 0 var(--kesri); }
-.akv-btns { display: flex; flex-wrap: wrap; gap: 8px; }
-.akv-btns .btn { flex: 1 1 40%; }
-.card p { margin: 0 0 4px; }
-.card .gur { font-size: 19px; line-height: 1.55; }
-.small { color: var(--muted); font-size: 14px; margin-bottom: 10px !important; }
+/* ---------------- the views ---------------- */
+main { padding: 14px 16px calc(150px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.view { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; }
+main > *, .view > * { min-width: 0; }
+h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 6px; }
+.small { color: var(--muted); font-size: 14px; margin: 0; }
 ol { list-style: none; margin: 0; padding: 0; }
-.cands li { padding: 12px 0; border-top: 1px solid var(--rule); }
-.cands li:first-child { border-top: 0; }
-.lines li button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 10px 12px; border-radius: 10px; font-family: var(--gur); font-size: 18px; line-height: 1.55; color: var(--muted); min-height: 48px; }
-.lines li button[aria-current="true"] { background: var(--panel); color: var(--ink); box-shadow: inset 5px 0 0 var(--c); }
-.lines li button.rahao::after { content: " rahao"; font: 500 12px var(--ui); color: var(--kesri); }
-
-.btn { border: 0; background: var(--btn); color: var(--btn-ink); border-radius: 14px; min-height: 56px; padding: 10px 16px; font-weight: 600; font-size: 17px; }
+.card { border: 1px solid var(--kesri); border-radius: 14px; padding: 14px; background: var(--panel); display: grid; gap: 8px; }
+.card p { margin: 0; }
+.card .gur { font-size: 19px; line-height: 1.55; }
+.banner { margin: 0; border: 1px solid var(--lost); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+.btn { border: 0; background: var(--btn); color: var(--btn-ink); border-radius: 12px; min-height: 48px; padding: 8px 16px; font-weight: 600; font-size: 16px; }
 .btn:active { filter: brightness(.94); }
 .btn.primary { background: var(--kesri); color: #fff; }
-.btn.slim { min-height: 44px; font-size: 16px; }
+.btn.slim { min-height: 44px; }
+.btnrow { display: flex; gap: 8px; }
+.btnrow .btn { flex: 1; }
 
-.controls { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; background: var(--bg); border-top: 1px solid var(--rule); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.controls .btn { min-height: 52px; font-size: 16px; line-height: 1.25; }
-.controls .listen { position: relative; overflow: hidden; }
-.controls .listen[aria-pressed="true"] { background: var(--kesri); color: #fff; }
-.controls .lvl { position: absolute; left: 0; bottom: 0; height: 5px; width: 0; background: var(--follow); transition: width .1s; }
-.mic-line { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
-.controls .hold[aria-pressed="true"] { background: var(--hold); color: #fff; }
-.controls .reset { grid-column: 1 / -1; min-height: 44px; font-weight: 500; background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
-.controls .reset.armed { box-shadow: none; background: var(--lost); color: #fff; }
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--btn); border-radius: 12px; padding: 4px; width: 100%; }
-.tabs button { border: 0; background: transparent; border-radius: 9px; min-height: 42px; font-weight: 500; }
-.tabs button[aria-selected="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
+/* on the screen now */
+.now { background: var(--panel); border-radius: 14px; padding: 14px 16px; display: flex; gap: 12px; }
+.now::before { content: ""; width: 4px; border-radius: 2px; background: var(--c); flex: none; }
+.now > div { display: grid; gap: 6px; min-width: 0; flex: 1; }
+.now .title { font-size: 15px; color: var(--muted); line-height: 1.45; }
+.now .cur { font-size: 25px; line-height: 1.45; margin: 0; }
+.now .en { font-size: 15px; line-height: 1.4; margin: 0; }
+.now .next { font-size: 17px; line-height: 1.45; color: var(--muted); margin: 0; }
+.now .where { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.now .empty { color: var(--muted); margin: 0; }
+.mic-line { color: var(--muted); font-size: 14px; margin: 0; }
+
+/* Asa Ki Vaar: where the Vaar has reached (the sangat screens show just the Gurbani) */
+.akv h2 { display: flex; justify-content: space-between; align-items: baseline; margin: 0; font-size: 14px; color: var(--ink); }
+.akv h2 .gur { font-size: 16px; font-weight: 400; }
+.akv-strip { display: flex; gap: 6px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 1px; }
+.akv-strip::-webkit-scrollbar { display: none; }
+.akv-strip button { flex: none; width: 42px; height: 42px; padding: 0; border-radius: 8px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+                    font: 400 17px/1 var(--gur); scroll-snap-align: center; }
+.akv-strip button.done { color: var(--muted); background: var(--btn); }
+.akv-strip button[aria-current="true"] { background: var(--kesri); border-color: var(--kesri); color: #fff; }
+
+.cands li { padding: 12px 0; border-top: 1px solid var(--rule); display: grid; gap: 6px; }
+.cands li:first-child { border-top: 0; }
+.lines li button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 10px;
+                   font-family: var(--gur); font-size: 17px; line-height: 1.5; color: var(--muted); min-height: 44px; }
+.lines li button[aria-current="true"] { background: var(--panel); color: var(--ink); box-shadow: inset 4px 0 0 var(--c); }
+.lines li button.rahao::after { content: " rahao"; font: 500 12px var(--ui); color: var(--kesri); }
+
+/* search, history */
 .qrow { display: flex; gap: 8px; }
-.qrow input { flex: 1; min-width: 0; font: inherit; font-size: 18px; color: inherit; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; }
+.qrow input { flex: 1; min-width: 0; font-size: 18px; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; }
 .qrow input:focus { border-color: var(--kesri); outline: none; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.chips button { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 6px 12px; font-size: 15px; min-height: 36px; }
+.chips button { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 15px; min-height: 36px; }
 .chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .results li + li, .hist li + li { border-top: 1px solid var(--rule); }
 .results button, .hist button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 12px 6px; border-radius: 10px; }
@@ -123,19 +141,9 @@ ol { list-style: none; margin: 0; padding: 0; }
 .results .w, .hist .w { color: var(--muted); font-size: 14px; display: block; }
 .results .e { color: var(--muted); font-size: 14px; display: block; line-height: 1.4; margin-top: 2px; }
 .hist .t { font-weight: 600; color: var(--kesri); margin-right: 6px; }
-.castbtn { border: 0; background: var(--btn); color: var(--ink); border-radius: 10px; width: 46px; height: 46px; display: grid; place-items: center; flex: none; }
-.castbtn .cast-fill { display: none; }
-.castbtn.on { background: var(--kesri); color: #fff; }
-.castbtn.on .cast-fill { display: inline; }
-.sheet { border: 1px solid var(--rule); border-radius: 14px; background: var(--panel); padding: 14px; display: grid; gap: 10px; }
-.sheet h2 { margin: 0; }
-.sheet ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.sheet li button { width: 100%; text-align: left; border: 0; background: var(--btn); border-radius: 12px; padding: 12px 14px; font-weight: 600; min-height: 52px; }
-.sheet li button small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
-.sheet .now { border: 1px solid var(--kesri); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
 .kbd-toggle { flex: none; border: 1px solid var(--rule); background: var(--panel); border-radius: 12px; width: 52px; font-family: var(--gur); font-size: 22px; }
 .kbd-toggle[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.gkbd { display: grid; gap: 6px; margin-top: 10px; }
+.gkbd { display: grid; gap: 6px; }
 .gkbd .keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
 .gkbd button { border: 0; background: var(--panel); box-shadow: inset 0 0 0 1px var(--rule); border-radius: 10px; height: 46px; font-family: var(--gur); font-size: 22px; padding: 0; }
 .gkbd button:active { background: var(--btn); }
@@ -143,27 +151,14 @@ ol { list-style: none; margin: 0; padding: 0; }
 .gkbd .row button { font-family: var(--ui); font-size: 16px; font-weight: 600; }
 .gkbd small { color: var(--muted); font-size: 13px; }
 .letters-preview { font-family: var(--gur); font-size: 22px; letter-spacing: .12em; color: var(--ink); }
-.banner { margin: 0; border: 1px solid var(--lost); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
-@media (min-width: 700px) { main, .top { max-width: 720px; margin: 0 auto; } .controls { max-width: 720px; margin: 0 auto; } }
-@media (prefers-reduced-motion: no-preference) { .cur { transition: opacity .2s; } }
-.top .logo { width: 32px; height: 32px; flex: none; }
-.top .appname { flex: 1 1 calc(100% - 50px); font-weight: 600; font-size: 15px; line-height: 1.3; }
-.top .appname .beta { color: var(--kesri); font-weight: 500; }
-.top .appname .ver { color: var(--muted); font-weight: 500; margin-left: 4px; }
+
 /* ਵਾਹਿਗੁਰੂ, a message or a picture on the screens instead of the Gurbani */
-.tabs.four { grid-template-columns: repeat(4, 1fr); }
-.tabs button { position: relative; }
-.tabs button .on-dot { position: absolute; top: 7px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--kesri); }
-.tabs button .on-dot[hidden] { display: none; }
-#tab-msg { display: grid; gap: 12px; }
-#tab-msg[hidden] { display: none; }
-#tab-msg h2 { margin: 6px 0 0; }
 .vaheguru { width: 100%; font: 400 34px/1.2 var(--gur); min-height: 76px; }
 .msgform { display: flex; gap: 8px; }
-.msgform input { flex: 1; min-width: 0; font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; }
+.msgform input { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; }
 .msgform input:focus { border-color: var(--kesri); outline: none; }
 .msg-recent { display: flex; flex-wrap: wrap; gap: 8px; }
-.msg-recent button { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 6px 14px; font-size: 15px; min-height: 40px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+.msg-recent button { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 6px 14px; font-size: 15px; min-height: 40px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msg-pics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .msg-pics:empty { display: none; }
 .msg-pics .pic { position: relative; }
@@ -171,28 +166,67 @@ ol { list-style: none; margin: 0; padding: 0; }
 .msg-pics img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .msg-pics .forget { position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); font-size: 15px; line-height: 28px; padding: 0; }
 .where-to { display: grid; gap: 10px; }
-.where-to label { display: flex; align-items: center; gap: 12px; min-height: 40px; }
-.where-to input { width: 22px; height: 22px; margin: 0; accent-color: var(--kesri); }
+.where-to label, .set label { display: flex; align-items: center; gap: 12px; min-height: 40px; }
+.where-to input, .set input { width: 22px; height: 22px; margin: 0; accent-color: var(--kesri); }
 .msg-on { margin: 0; display: grid; gap: 10px; border: 2px solid var(--kesri); border-radius: 14px; padding: 12px 14px; background: var(--panel); }
-.msg-on[hidden] { display: none; }
 .msg-on span { font-weight: 600; }
 .msg-on img { max-height: 70px; max-width: 100%; border-radius: 8px; justify-self: start; }
+.on-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--kesri); }
 
-/* web version: start-up panel, sangat screen, recording */
+/* sheets in the page: casting, the secure address */
+.sheet { border: 1px solid var(--rule); border-radius: 14px; background: var(--panel); padding: 14px; display: grid; gap: 10px; }
+.sheet h2 { margin: 0; }
+.sheet ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sheet li button { width: 100%; text-align: left; border: 0; background: var(--btn); border-radius: 12px; padding: 12px 14px; font-weight: 600; min-height: 52px; }
+.sheet li button small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
+.sheet .castnow { border: 1px solid var(--kesri); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+
+/* ---------------- bottom: the line controls and the views ---------------- */
+.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; background: var(--bg); }
+.controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 10px 16px; border-top: 1px solid var(--rule); }
+.cbtn { border: 0; background: var(--btn); color: var(--btn-ink); border-radius: 12px; min-height: 54px; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 1px; font-size: 13px; font-weight: 600; position: relative; overflow: hidden; padding: 4px 2px; }
+.cbtn:active { filter: brightness(.94); }
+.cbtn.hold[aria-pressed="true"] { background: var(--hold); color: #fff; }
+.cbtn.listen[aria-pressed="true"] { background: var(--kesri); color: #fff; }
+.cbtn:disabled { opacity: .45; }
+.cbtn .lvl { position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: var(--follow); transition: width .1s; }
+.tabbar { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--panel); border-top: 1px solid var(--rule);
+          padding: 2px 8px calc(4px + env(safe-area-inset-bottom, 0px)); }
+.tabbar button { border: 0; background: transparent; color: var(--muted); min-height: 50px; display: flex; flex-direction: column; align-items: center;
+                 justify-content: center; gap: 1px; font-size: 12px; font-weight: 600; position: relative; }
+.tabbar button[aria-selected="true"] { color: var(--kesri); font-weight: 700; }
+.tabbar .on-dot { position: absolute; top: 6px; right: calc(50% - 18px); }
+
+/* ---------------- the menu, and the other sheets from the bottom ---------------- */
+.shade { position: fixed; inset: 0; z-index: 10; background: rgba(15, 26, 48, .45); display: flex; align-items: flex-end; justify-content: center; }
+.msheet { width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; background: var(--panel); border-radius: 20px 20px 0 0;
+          padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; box-shadow: 0 -8px 30px rgba(0, 0, 0, .2); }
+.grab { width: 40px; height: 5px; border-radius: 3px; background: var(--rule); justify-self: center; margin-bottom: 6px; }
+.mhead { font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px 4px 0; }
+.mitem { display: flex; align-items: center; gap: 14px; border: 0; background: var(--bg); border-radius: 12px; padding: 10px 14px; text-align: left; min-height: 56px; width: 100%; }
+.mitem svg { flex: none; }
+.mitem span { flex: 1; display: grid; }
+.mitem b { font-weight: 600; }
+.mitem small { font-size: 13px; color: var(--muted); }
+.mitem.caution { background: var(--panel); border: 1px solid color-mix(in srgb, var(--lost) 40%, var(--rule)); color: var(--lost); }
+.mitem.caution.armed { background: var(--lost); color: #fff; }
+.mitem.caution.armed small { color: #fff; }
+.mfoot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 4px 0; font-size: 13px; color: var(--muted); }
+.mfoot .btn { min-height: 40px; padding: 4px 16px; }
+.set { display: grid; gap: 4px; }
+.set select { width: 100%; background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
+
+/* web: getting ready, a recording, the sangat screen */
 .start { display: grid; gap: 12px; }
-.start h2 { margin: 0; font-size: 19px; }
-.start .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
-.start .row b { font-weight: 600; }
-.start .row span { color: var(--muted); font-size: 15px; grid-column: 1 / -1; }
-.start .row.done span { color: var(--follow); }
+.start h2 { margin: 0; font-size: 19px; color: var(--ink); }
+.start .srow { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.start .srow b { font-weight: 600; }
+.start .srow span { color: var(--muted); font-size: 15px; grid-column: 1 / -1; }
+.start .srow.done span { color: var(--follow); }
 .bar { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; grid-column: 1 / -1; }
 .bar i { display: block; height: 100%; width: 0; background: var(--kesri); transition: width .3s; }
-.start .note { margin: 0; color: var(--muted); font-size: 15px; }
 .start .err { margin: 0; color: var(--lost); font-weight: 600; }
-.trybox { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.trybox .small { margin: 0; flex: 1 1 200px; }
-.top .status { flex: 1 1 100%; }            /* the status on a row of its own: never cut short */
-.screenbtn { border: 0; background: var(--btn); border-radius: 10px; min-height: 40px; padding: 0 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
 .sangat { position: fixed; inset: 0; z-index: 20; background: #0B1324; color: #F3F1EC; display: grid; grid-template-rows: 1fr auto;
   padding: calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-right, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 12px) calc(env(safe-area-inset-left, 0px) + 20px); }
 .sangat .body { display: flex; flex-direction: column; justify-content: center; gap: 2.2vh; text-align: center; min-height: 0; overflow: hidden; }
@@ -203,36 +237,139 @@ ol { list-style: none; margin: 0; padding: 0; }
 .sangat .msgtext { font-family: var(--ui); font-size: clamp(26px, 6vmin, 80px); color: #FFFFFF; margin: 0; }
 .sangat img { max-width: 100%; max-height: 80vh; object-fit: contain; align-self: center; }
 .sangat .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #8EA0BF; font-size: 14px; }
-.sangat .foot button { border: 1px solid #2A3C5E; background: transparent; color: #F3F1EC; border-radius: 10px; min-height: 40px; padding: 0 14px; font: inherit; }
+.sangat .foot button { border: 1px solid #2A3C5E; background: transparent; color: #F3F1EC; border-radius: 10px; min-height: 40px; padding: 0 14px; }
+
+@media (min-width: 700px) { main, .top { max-width: 720px; margin: 0 auto; } .controls, .tabbar { max-width: 720px; margin: 0 auto; } }
+@media (max-width: 370px) { .seg button { padding: 0 9px; font-size: 15px; } .optchip { font-size: 14px; padding: 0 8px; } }
+@media (prefers-reduced-motion: no-preference) { .now .cur { transition: opacity .2s; } }
 </style>
 </head>
 <body>
 <header class="top">
-  <img class="logo" src="logo64.png" alt="" width="32" height="32">
-  <div class="appname">Gurbani Audio Searcher <span class="beta">(beta testing)</span> <span class="ver">ਅ੨</span></div>
-  <div class="status" id="status" data-group="find" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="statusText">Getting ready</span></div>
-  <div class="seg" role="group" aria-label="What is happening">
-    <button type="button" data-mode="kirtan" aria-pressed="true">Kirtan</button>
-    <button type="button" data-mode="paath" aria-pressed="false">Paath</button>
+  <div class="row">
+    <img class="logo" src="logo64.png" alt="" width="30" height="30">
+    <div class="status" id="status" data-group="find" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="statusText">Connecting to the console</span><span class="sub" id="statusSub"></span></div>
+    <button type="button" class="iconbtn" id="menuBtn" aria-label="More: screens, start over" aria-haspopup="dialog">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <span class="on-dot" id="menuDot" hidden></span>
+    </button>
   </div>
-  <label class="sehaj"><input type="checkbox" id="sehaj"> Akhand / Sehaj Paath</label>
-  <label class="sehaj" id="akvOpt"><input type="checkbox" id="akvOn"> Asa Ki Vaar</label>
-  <button type="button" class="castbtn" hidden id="castBtn" aria-label="Cast to a TV" title="Cast to a TV"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/><path class="cast-fill" fill="currentColor" d="M5 7v1.63c3.96 1.28 7.09 4.41 8.37 8.37H19V7H5z"/></svg></button>
-  <button type="button" class="screenbtn" id="screenBtn" aria-label="Show the sangat screen full screen"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3 5h18v12H3zM8 19h8v2H8z"/></svg>Sangat screen</button>
-  <select id="bani" aria-label="Bani to follow" hidden><option value="">Detect the bani automatically</option></select>
-  <div class="tabs four" role="tablist" aria-label="Views">
-    <button type="button" role="tab" data-tab="now" aria-selected="true">Now</button>
-    <button type="button" role="tab" data-tab="search" aria-selected="false">Search</button>
-    <button type="button" role="tab" data-tab="history" aria-selected="false">History</button>
-    <button type="button" role="tab" data-tab="msg" aria-selected="false">Message<span class="on-dot" id="msgDot" hidden></span></button>
+  <div class="row">
+    <div class="seg" role="group" aria-label="What is happening">
+      <button type="button" data-mode="kirtan" aria-pressed="true">Kirtan</button>
+      <button type="button" data-mode="paath" aria-pressed="false">Paath</button>
+      <button type="button" data-mode="akhand" aria-pressed="false" aria-label="Akhand Paath (or Sehaj Paath)">Akhand</button>
+    </div>
+    <div class="opt">
+      <button type="button" class="optchip" id="akvChip" aria-pressed="false" hidden><span class="tick" aria-hidden="true"></span>Asa Ki Vaar</button>
+      <select id="bani" class="optchip" aria-label="Bani to follow" hidden><option value="">Bani: found by itself</option></select>
+    </div>
   </div>
 </header>
 
 <main>
   <p class="banner" id="banner" role="alert" hidden></p>
   <section class="msg-on" id="msgOn" hidden aria-live="polite"><span id="msgOnText"></span><img id="msgOnImg" alt="" hidden><button type="button" class="btn slim primary" id="msgOnBack">Back to Gurbani</button></section>
-  <section id="tab-msg" hidden aria-label="Message on the screens">
-    <p class="small" style="margin:0 !important">Shows on the sangat screen instead of the Gurbani. Listening carries on; "Back to Gurbani" returns to the current line.</p>
+
+  <!-- ===== Now ===== -->
+  <div class="view" id="tab-now">
+    <section class="card start" id="startBox" hidden aria-live="polite">
+      <h2>Getting ready</h2>
+      <div class="srow" id="rowAsr"><b>Speech model</b><div class="bar"><i id="barAsr"></i></div><span id="txtAsr">Waiting</span></div>
+      <div class="srow" id="rowEng"><b>Gurbani engine</b><div class="bar"><i id="barEng"></i></div><span id="txtEng">Waiting</span></div>
+      <p class="small">The first time, this downloads about 200 MB, so use Wi-Fi; after that the speech model is kept on this phone. Everything runs on this phone: nothing it hears is sent anywhere.</p>
+      <p class="err" id="startErr" hidden></p>
+    </section>
+    <section class="sheet" id="secureSheet" hidden aria-label="Use this phone's microphone">
+      <h2>Use this phone's microphone</h2>
+      <p style="margin:0">Phones only let a page use the microphone over a secure connection, so this page needs to open its secure address first.</p>
+      <p style="margin:0">Your browser will then warn that the connection isn't private. That's expected: it is the console on the laptop. Tap <b>Advanced</b> (or <b>Show details</b>), then <b>Proceed</b> (or <b>visit this website</b>). This phone only has to do that once.</p>
+      <button type="button" class="btn slim primary" id="secureGo">Continue</button>
+      <button type="button" class="btn slim" id="secureClose">Not now</button>
+    </section>
+    <section class="sheet" id="listenPrompt" hidden aria-label="Ready to listen">
+      <p style="margin:0">Secure connection ready. Tap <b>Listen</b> at the bottom to start. Keep this page open and the phone unlocked and plugged in; place it near the ragis' speaker.</p>
+    </section>
+    <section class="sheet" id="castSheet" hidden aria-label="Cast">
+      <div class="castnow" id="castNow" hidden><span id="castNowText"></span><button type="button" class="btn slim" id="castStop">Stop casting</button></div>
+      <h2>Cast the sangat display to</h2>
+      <ul id="castList"></ul>
+      <p class="small" id="castNote">Looking for Chromecasts…</p>
+      <button type="button" class="btn slim" id="castClose">Close</button>
+    </section>
+    <section class="sheet" id="tryCard" hidden aria-label="A recording">
+      <p class="small" id="tryNote"></p>
+      <button type="button" class="btn slim" id="tryStop">Stop the recording</button>
+    </section>
+
+    <section class="now" id="now" data-group="find" aria-label="On the screen now">
+      <div>
+        <div class="title gur" id="title"></div>
+        <p class="cur gur" id="cur"></p>
+        <p class="en" id="curEn" hidden></p>
+        <p class="next gur" id="next"></p>
+        <div class="where" id="where"></div>
+        <p class="mic-line" id="micLine"></p>
+        <p class="empty" id="empty">Nothing is on the screen yet. It appears here as soon as the console recognises the kirtan or paath.</p>
+      </div>
+    </section>
+
+    <section class="card akv" id="akvBox" hidden aria-label="Asa Ki Vaar">
+      <h2><span>Asa Ki Vaar</span><span class="gur" id="akvWhere"></span></h2>
+      <div class="akv-strip" id="akvStrip" role="group" aria-label="Go to a pauri (swipe for more)"></div>
+      <p class="small" id="akvNote" hidden></p>
+      <div class="btnrow">
+        <button type="button" class="btn slim primary" id="akvResume" hidden>Back to the Vaar</button>
+        <button type="button" class="btn slim" id="akvNext">Next part</button>
+        <button type="button" class="btn slim" id="akvEnd">End the Vaar</button>
+      </div>
+    </section>
+
+    <section class="card" id="akvSug" hidden>
+      <p>This is part of Asa Ki Vaar.</p>
+      <button type="button" class="btn slim primary" id="akvSugBtn">Follow Asa Ki Vaar in order</button>
+    </section>
+
+    <section class="card" id="prevCard" hidden>
+      <p class="gur" id="prevLine"></p>
+      <p class="small" id="prevWhere"></p>
+      <button type="button" class="btn slim primary" id="prevBtn">Back to previous shabad</button>
+    </section>
+
+    <section class="cands" id="candsBox" hidden>
+      <h2>Possible shabads</h2>
+      <ol id="cands"></ol>
+    </section>
+
+    <section class="lines" id="linesBox" hidden>
+      <h2 id="linesTitle">Lines</h2>
+      <ol id="lines"></ol>
+    </section>
+  </div>
+
+  <!-- ===== Search ===== -->
+  <section class="view" id="tab-search" hidden aria-label="Search Gurbani">
+    <div class="qrow"><input type="search" id="q" placeholder="Search Gurbani" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button type="button" class="kbd-toggle" id="kbdBtn" aria-pressed="false" aria-label="Gurmukhi keyboard">ੳ</button></div>
+    <div class="gkbd" id="gkbd" hidden></div>
+    <div class="chips" role="group" aria-label="Search by">
+      <button type="button" data-q="auto" aria-pressed="true">Gurmukhi</button>
+      <button type="button" data-q="letters" aria-pressed="false">First letters</button>
+      <button type="button" data-q="words" aria-pressed="false">Words</button>
+      <button type="button" data-q="latin" aria-pressed="false">English</button>
+    </div>
+    <p class="small" id="qHint">Type first letters or words; English keys come out in Gurmukhi on the SikhiToTheMax layout (mmrAe = ਮਮਰਅੲ). Choose English for the translation or words in English letters. Tap ੳ for a Gurmukhi keyboard. Tap a line to put it on the screen.</p>
+    <ol class="results" id="results"></ol>
+  </section>
+
+  <!-- ===== History ===== -->
+  <section class="view" id="tab-history" hidden aria-label="History">
+    <p class="small" id="histEmpty">Shabads appear here once they have been on screen for a little while, or as soon as someone picks one.</p>
+    <ol class="hist" id="histList"></ol>
+  </section>
+
+  <!-- ===== Message ===== -->
+  <section class="view" id="tab-msg" hidden aria-label="Message on the screens">
+    <p class="small" id="msgIntro">Shows on the screens instead of the Gurbani. Listening carries on; "Back to Gurbani" returns to the current line.</p>
     <button type="button" class="btn vaheguru" id="msgVaheguru">ਵਾਹਿਗੁਰੂ</button>
     <h2>A message</h2>
     <form class="msgform" id="msgForm"><input type="text" id="msgText" maxlength="200" placeholder="e.g. Ardas will begin shortly" enterkeyhint="send" aria-label="Message"><button type="submit" class="btn slim primary">Show</button></form>
@@ -241,174 +378,144 @@ ol { list-style: none; margin: 0; padding: 0; }
     <div class="msg-pics" id="msgPics"></div>
     <button type="button" class="btn slim" id="msgPick">Choose a picture</button>
     <input type="file" id="msgFile" accept="image/*" hidden>
-    
-    <div class="where-to" hidden>
+    <div class="where-to" id="whereTo">
+      <h2>Show on</h2>
       <label><input type="checkbox" id="msgScreens" checked> Projector and TV</label>
       <label><input type="checkbox" id="msgOverlay" checked> Livestream overlay</label>
     </div>
   </section>
-  <section class="sheet" id="secureSheet" hidden aria-label="Use this phone's microphone">
-    <h2>Use this phone's microphone</h2>
-    <p style="margin:0">Phones only let a page use the microphone over a secure connection, so this page needs to open its secure address first.</p>
-    <p style="margin:0">Your browser will then warn that the connection isn't private. That's expected: it is the console on the laptop. Tap <b>Advanced</b> (or <b>Show details</b>), then <b>Proceed</b> (or <b>visit this website</b>). This phone only has to do that once.</p>
-    <button type="button" class="btn slim primary" id="secureGo">Continue</button>
-    <button type="button" class="btn slim" id="secureClose">Not now</button>
-  </section>
-  <section class="sheet" id="listenPrompt" hidden aria-label="Ready to listen">
-    <p style="margin:0">Secure connection ready. Tap <b>Listen with this phone</b> at the bottom to start. Keep this page open and the phone unlocked and plugged in; place it near the ragis' speaker.</p>
-  </section>
-  <section class="sheet" id="castSheet" hidden aria-label="Cast">
-    <div class="now" id="castNow" hidden><span id="castNowText"></span><button type="button" class="btn slim" id="castStop">Stop casting</button></div>
-    <h2>Cast the sangat display to</h2>
-    <ul id="castList"></ul>
-    <p class="small" id="castNote" style="margin:0">Looking for Chromecasts…</p>
-    <button type="button" class="btn slim" id="castClose">Close</button>
-  </section>
-  <section id="tab-search" hidden aria-label="Search Gurbani">
-    <div class="qrow"><input type="search" id="q" placeholder="Search Gurbani" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button type="button" class="kbd-toggle" id="kbdBtn" aria-pressed="false" aria-label="Gurmukhi keyboard">ੳ</button></div>
-    <div class="gkbd" id="gkbd" hidden></div>
-    <div class="chips" role="group" aria-label="Search by" style="margin-top:10px">
-      <button type="button" data-q="auto" aria-pressed="true">Gurmukhi</button>
-      <button type="button" data-q="letters" aria-pressed="false">First letters</button>
-      <button type="button" data-q="words" aria-pressed="false">Words</button>
-      <button type="button" data-q="latin" aria-pressed="false">English</button>
-    </div>
-    <p class="small" id="qHint" style="margin:10px 0 0">Type first letters or words; English keys come out in Gurmukhi on the SikhiToTheMax layout (mmrAe = ਮਮਰਅੲ). Choose English for the translation or words in English letters. Tap ੳ for a Gurmukhi keyboard. Tap a line to put it on the screen.</p>
-    <ol class="results" id="results"></ol>
-  </section>
-  <section id="tab-history" hidden aria-label="History">
-    <p class="small" id="histEmpty">Shabads appear here once they have been on screen for a little while, or as soon as someone picks one.</p>
-    <ol class="hist" id="histList"></ol>
-  </section>
-  <div id="tab-now">
-  <section class="card start" id="startBox" aria-live="polite">
-    <h2>Getting ready</h2>
-    <div class="row" id="rowAsr"><b>Speech model</b><div class="bar"><i id="barAsr"></i></div><span id="txtAsr">Waiting</span></div>
-    <div class="row" id="rowEng"><b>Gurbani engine</b><div class="bar"><i id="barEng"></i></div><span id="txtEng">Waiting</span></div>
-    <p class="note">The first time, this downloads about 200 MB, so use Wi-Fi; after that the speech model is kept on this phone. Everything runs on this phone: nothing it hears is sent anywhere.</p>
-    <p class="err" id="startErr" hidden></p>
-  </section>
-  <section class="now" id="now" data-group="find" aria-label="On the screen now">
-    <div class="title gur" id="title"></div>
-    <p class="cur gur" id="cur"></p>
-    <p class="next gur" id="next"></p>
-    <div class="where" id="where"></div>
-    <p class="mic-line" id="micLine"></p>
-    <p class="empty" id="empty">Nothing is on the screen yet. Tap Start listening below; the Gurbani appears here as soon as the kirtan or paath is recognised.</p>
-  </section>
-
-  <section class="card akv" id="akvBox" hidden aria-label="Asa Ki Vaar">
-    <h2><span>Asa Ki Vaar</span><span class="gur" id="akvWhere"></span></h2>
-    <div class="akv-strip" id="akvStrip" role="group" aria-label="Go to a pauri"></div>
-    <div class="akv-parts" aria-hidden="true"><span data-part="chhant">ਛੰਤ</span><span data-part="salok">ਸਲੋਕ</span><span data-part="pauri">ਪਉੜੀ</span></div>
-    <p class="small" id="akvNote" hidden></p>
-    <div class="akv-btns">
-      <button type="button" class="btn slim primary" id="akvResume" hidden>Back to the Vaar</button>
-      <button type="button" class="btn slim" id="akvNext">Next part</button>
-      <button type="button" class="btn slim" id="akvEnd">End the Vaar</button>
-    </div>
-  </section>
-
-  <section class="card" id="akvSug" hidden>
-    <p>This is part of Asa Ki Vaar.</p>
-    <button type="button" class="btn slim primary" id="akvSugBtn">Follow Asa Ki Vaar in order</button>
-  </section>
-
-  <section class="card" id="prevCard" hidden>
-    <p class="gur" id="prevLine"></p>
-    <p class="small" id="prevWhere"></p>
-    <button type="button" class="btn slim primary" id="prevBtn">Back to previous shabad</button>
-  </section>
-
-  <section class="cands" id="candsBox" hidden>
-    <h2>Possible shabads</h2>
-    <ol id="cands"></ol>
-  </section>
-
-  <section class="card" id="tryBox">
-    <div class="trybox">
-      <p class="small">To try it without live kirtan, play a recording (an audio file on this phone) through it instead of the microphone.</p>
-      <button type="button" class="btn slim" id="tryPick">Play a recording</button>
-      <button type="button" class="btn slim" id="tryStop" hidden>Stop the recording</button>
-      <input type="file" id="tryFile" accept="audio/*,video/*" hidden>
-    </div>
-    <p class="small" id="tryNote" style="margin:8px 0 0" hidden></p>
-  </section>
-
-  <section class="lines" id="linesBox" hidden>
-    <h2 id="linesTitle">Lines</h2>
-    <ol id="lines"></ol>
-  </section>
-  </div>
 </main>
 
+<div class="bottom">
+  <nav class="controls" aria-label="Line controls">
+    <button type="button" class="cbtn" id="back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Previous</button>
+    <button type="button" class="cbtn hold" id="hold" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg><span id="holdText">Pause</span></button>
+    <button type="button" class="cbtn" id="fwd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Next</button>
+    <button type="button" class="cbtn listen" id="listen" aria-pressed="false" aria-label="Listen with this phone's microphone"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="listenText">Listen</span><span class="lvl" id="lvl"></span></button>
+  </nav>
+  <nav class="tabbar" role="tablist" aria-label="Views">
+    <button type="button" role="tab" data-tab="now" aria-selected="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Now</button>
+    <button type="button" role="tab" data-tab="search" aria-selected="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>Search</button>
+    <button type="button" role="tab" data-tab="history" aria-selected="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>History</button>
+    <button type="button" role="tab" data-tab="msg" aria-selected="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>Message<span class="on-dot" id="msgDot" hidden></span></button>
+  </nav>
+</div>
+
+<!-- the menu -->
+<div class="shade" id="menu" hidden role="dialog" aria-modal="true" aria-label="More">
+  <div class="msheet">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="mhead">Screens</div>
+    <button type="button" class="mitem" id="menuCast"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18a3 3 0 0 1 3 3M3 14a7 7 0 0 1 7 7M3 10a11 11 0 0 1 11 11"/><path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3"/></svg><span><b>Cast to a TV</b><small id="menuCastNote">The laptop casts to a Chromecast; choose which</small></span></button>
+    <button type="button" class="mitem" id="menuScreen" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span><b>Sangat screen</b><small>The Gurbani full screen on this phone, or mirrored to a TV</small></span></button>
+    <button type="button" class="mitem" id="menuTv" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18a3 3 0 0 1 3 3M3 14a7 7 0 0 1 7 7M3 10a11 11 0 0 1 11 11"/><path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3"/></svg><span><b>Show on a TV</b><small>How to mirror this phone to a TV</small></span></button>
+    <div class="mhead">This phone</div>
+    <button type="button" class="mitem" id="menuSettings" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span><b>Settings</b><small>Translation, next line, bani lengths</small></span></button>
+    <button type="button" class="mitem" id="menuTry" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span><b>Play a recording</b><small>Try it with an audio file instead of the microphone</small></span></button>
+    <input type="file" id="tryFile" accept="audio/*,video/*" hidden>
+    <button type="button" class="mitem caution" id="reset"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v5h5"/></svg><span><b id="resetText">Start over</b><small id="resetNote">Clears the screen and listens afresh (asks to confirm)</small></span></button>
+    <div class="mfoot"><span>Gurbani Audio Searcher · <span id="verName">ਅ੩</span> · beta testing</span><button type="button" class="btn" id="menuClose">Close</button></div>
+  </div>
+</div>
+
+<!-- web: settings, and how to show it on a TV -->
+<div class="shade" id="setSheet" hidden role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="msheet">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="mhead">On the screen</div>
+    <div class="set">
+      <label><input type="checkbox" data-set="en"> English translation</label>
+      <label><input type="checkbox" data-set="next"> Next line</label>
+      <label><input type="checkbox" data-set="predict"> Move ahead to the next line in paath</label>
+    </div>
+    <div class="mhead">Rehras, Chaupai, Sohila, Aarti</div>
+    <div class="set">
+      <select data-choice="bani_length" aria-label="Length of Rehras, Chaupai, Sohila and Aarti">
+        <option value="short">Short (SGPC)</option><option value="medium">Medium</option>
+        <option value="long">Long (Taksal)</option><option value="extra long">Extra long (Buddha Dal)</option>
+      </select>
+      <p class="small">The length followed in Paath when one of these banis is found by itself, as SikhiToTheMax lists them.</p>
+    </div>
+    <div class="mfoot"><span></span><button type="button" class="btn" id="setClose">Done</button></div>
+  </div>
+</div>
+<div class="shade" id="tvSheet" hidden role="dialog" aria-modal="true" aria-label="Show on a TV">
+  <div class="msheet">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="mhead">Show on a TV</div>
+    <p style="margin:4px 4px 0">1. Open <b>Sangat screen</b> from this menu.</p>
+    <p style="margin:0 4px">2. Swipe down from the top right corner (Control Centre), tap <b>Screen Mirroring</b> and choose the Apple TV or AirPlay TV. The TV must be on the same Wi-Fi.</p>
+    <p style="margin:0 4px">3. Keep this phone unlocked and plugged in. Turn on <b>Do Not Disturb</b> so messages don't appear on the TV.</p>
+    <div class="mfoot"><span></span><button type="button" class="btn" id="tvClose">Close</button></div>
+  </div>
+</div>
 <div class="sangat" id="sangat" hidden role="dialog" aria-label="Sangat screen">
   <div class="body" id="sgBody"><p class="g" id="sgG"></p><p class="en" id="sgEn"></p><p class="nx" id="sgNx"></p></div>
   <div class="foot"><span id="sgWhere"></span><button type="button" id="sgClose">Close</button></div>
 </div>
 
-<nav class="controls" aria-label="Display controls">
-  <button type="button" class="btn" id="back">Previous line</button>
-  <button type="button" class="btn" id="fwd">Next line</button>
-  <button type="button" class="btn hold" id="hold" aria-pressed="false">Pause auto changes</button>
-  <button type="button" class="btn listen" id="listen" aria-pressed="false">Start listening<span class="lvl" id="lvl"></span></button>
-  <button type="button" class="btn reset" id="reset">Start over</button>
-</nav>
-
-<script src="local.js?v=2026-10-13a"></script>
+<script src="local.js?v=2026-10-13b"></script>
 <script>
 (() => {
 "use strict";
 const $ = (id) => document.getElementById(id);
+const WEB = !!window.LOCAL;              // the web version: this phone is the whole app (local.js)
 const GROUP = { following: "follow", held_simran: "hold", held_quiet: "hold", held_user: "hold",
                 finding: "find", listening: "find", lost: "lost", searching_ahead: "hold" };
-const S = { tracks: {}, state: null, lastList: null, lastCands: null, banis: [], msg: null, recentImages: [], recentTexts: [] };
+const S = { tracks: {}, state: null, lastList: null, lastCands: null, banis: [], msg: null, recentImages: [], recentTexts: [],
+            settings: { en: true, next: true }, lastAkv: null };
 let ws = null, disconnected = false;
 
 function send(c, quiet) {
   if (ws && ws.readyState === 1) { ws.send(JSON.stringify(c)); if (!quiet && navigator.vibrate) navigator.vibrate(12); }
-  else banner("Not connected to the console yet.");
+  else banner(WEB ? "Still getting ready." : "Not connected to the console yet.");
 }
 function banner(msg) { $("banner").textContent = msg || ""; $("banner").hidden = !msg; }
+const imageURL = (n) => WEB ? LOCAL.imageURL(n) : "/message-image/" + n;
 
-var render = function () {
+/* ---------------- rendering ---------------- */
+function modeKey(st) { return !st || st.mode !== "paath" ? "kirtan" : st.sehaj ? "akhand" : "paath"; }
+function render() {
   const st = S.state;
   const status = st ? st.status : "listening";
   const group = GROUP[status] || "find";
   $("status").dataset.group = group; $("now").dataset.group = group;
-  $("statusText").textContent = st ? st.status_text : ($("statusText").textContent);
+  let text = st ? st.status_text : $("statusText").textContent;
+  if (WEB && st && status === "listening" && !MIC.on && !LOCAL.player) text = "Not listening";
+  $("statusText").textContent = text;
+  $("statusSub").textContent = micWords();
   const held = status === "held_user";
   $("hold").setAttribute("aria-pressed", String(held));
-  $("hold").textContent = held ? "Resume auto changes" : "Pause auto changes";
-  const mode = st ? st.mode : "kirtan";
-  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
-  const sehaj = !!(st && st.sehaj);
-  if (st) $("sehaj").checked = sehaj;
-  $("bani").hidden = mode !== "paath" || sehaj;
-  $("akvOpt").hidden = mode !== "kirtan";
-  $("sehaj").parentElement.hidden = mode !== "paath";               // each mode shows its own option
-  $("akvOn").checked = !!(st && st.akv);
-  renderAkv(st && mode === "kirtan" ? st.akv : null);
-  const sug = st && mode === "kirtan" ? st.suggestion : null;
+  $("holdText").textContent = held ? "Resume" : "Pause";
+  $("hold").setAttribute("aria-label", held ? "Resume auto changes" : "Pause auto changes");
+
+  const mkey = modeKey(st);
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mkey)));
+  $("akvChip").hidden = mkey !== "kirtan";
+  $("akvChip").setAttribute("aria-pressed", String(!!(st && st.akv)));
+  $("bani").hidden = mkey !== "paath";
+  const track = st && st.track_id ? S.tracks[st.track_id] : null;
+  if (document.activeElement !== $("bani")) $("bani").value = mkey === "paath" && track && track.kind === "bani" ? String(track.bani_id) : "";
+  renderAkv(st && mkey === "kirtan" ? st.akv : null);
+  const sug = st && mkey === "kirtan" ? st.suggestion : null;
   $("akvSug").hidden = !(sug && sug.bani_id === 13 && !st.akv);
 
-  const track = st && st.track_id ? S.tracks[st.track_id] : null;
   const pos = st ? (st.pos !== null && st.pos !== undefined ? st.pos : st.last_pos) : null;
   if (!track || pos === null || pos === undefined) {
     $("title").textContent = ""; $("cur").textContent = ""; $("next").textContent = ""; $("where").textContent = "";
-    $("empty").hidden = false; $("linesBox").hidden = true; S.lastList = null;
+    $("curEn").hidden = true; $("empty").hidden = false; $("linesBox").hidden = true; S.lastList = null;
   } else {
     const L = track.lines, line = L[pos] || {};
     const np = st.next_pos !== undefined && st.next_pos !== null ? st.next_pos : (pos + 1 < L.length ? pos + 1 : null);
     $("empty").hidden = true;
     $("title").textContent = line.st || track.title || "";          // Akhand / Sehaj Paath: the line's own shabad
     $("cur").textContent = line.g || "";
-    $("next").textContent = np !== null && L[np] ? L[np].g : "";
+    $("curEn").textContent = line.en || ""; $("curEn").hidden = S.settings.en === false || !line.en;
+    $("next").textContent = S.settings.next !== false && np !== null && L[np] ? L[np].g : "";
     const li = line.ln ? line.li : pos, ln = line.ln || L.length;
-    $("where").textContent = [`Line ${li + 1} of ${ln}`, line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.kind === "bani" ? track.subtitle : ""].filter(Boolean).join(", ");
+    $("where").textContent = [`Line ${li + 1} of ${ln}`, line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.kind === "bani" ? track.subtitle : ""].filter(Boolean).join(" · ");
     const key = track.id + ":" + pos;
     if (S.lastList !== key) { renderList(track, pos); S.lastList = key; }
-    if (track.kind === "bani") $("bani").value = String(track.bani_id);
   }
 
   const prev = st && st.mode === "kirtan" ? st.previous : null;
@@ -423,20 +530,22 @@ var render = function () {
     $("cands").replaceChildren(...cands.map(c => {
       const li = document.createElement("li");
       const g = document.createElement("p"); g.className = "gur"; g.style.margin = "0"; g.style.fontSize = "19px"; g.textContent = c.first_line;
-      const w = document.createElement("p"); w.className = "small"; w.style.margin = "2px 0 8px"; w.textContent = c.where;
+      const w = document.createElement("p"); w.className = "small"; w.textContent = c.where;
       const b = document.createElement("button"); b.type = "button"; b.className = "btn slim"; b.textContent = "Show this";
       b.onclick = () => send({ cmd: "confirm", sid: c.sid });
       li.append(g, w, b); return li;
     }));
   }
   S.lastCands = ck;
+  if (WEB) renderSangat();
 }
 
 const GUR_DIGITS = "੦੧੨੩੪੫੬੭੮੯";
 const gurNum = (n) => String(n).replace(/[0-9]/g, d => GUR_DIGITS[+d]);
+const PART = { chhant: "ਛੰਤ", salok: "ਸਲੋਕ", pauri: "ਪਉੜੀ" };
 function renderAkv(a) {
   $("akvBox").hidden = !a;
-  if (!a) return;
+  if (!a) { S.lastAkv = null; return; }
   const strip = $("akvStrip");
   if (!strip.children.length) {
     for (let n = 1; n <= 24; n++) {
@@ -453,8 +562,13 @@ function renderAkv(a) {
     b.setAttribute("aria-current", String(n === cur));
     b.classList.toggle("done", a.pauri !== null && (n < a.pauri || (a.paused && n === a.pauri)));
   });
-  document.querySelectorAll(".akv-parts span").forEach(x => x.classList.toggle("on", !a.paused && x.dataset.part === a.part));
-  $("akvWhere").textContent = a.paused ? "" : `ਪਉੜੀ ${gurNum(a.pauri)}`;
+  const focus = cur || a.next || a.pauri;
+  if (focus && S.lastAkv !== focus && !$("tab-now").hidden) {      // the pauri being sung in the middle of the strip
+    const b = strip.children[focus - 1];
+    if (b) strip.scrollLeft = b.offsetLeft - strip.offsetLeft - strip.clientWidth / 2 + b.offsetWidth / 2;
+    S.lastAkv = focus;
+  }
+  $("akvWhere").textContent = a.paused ? "" : `ਪਉੜੀ ${gurNum(a.pauri)} · ${PART[a.part] || ""}`;
   $("akvNote").hidden = !a.paused;
   if (a.paused) $("akvNote").textContent = a.next
     ? `A shabad between pauris. The Vaar carries on by itself when chhant ${a.next} is sung.` : "The Vaar is over.";
@@ -480,12 +594,12 @@ function renderList(track, pos) {
 }
 
 /* ---------------- ਵਾਹਿਗੁਰੂ, a message or a picture on the screens ---------------- */
-function sendMsg(c) { send(Object.assign({ cmd: "screen_msg", screens: $("msgScreens").checked, overlay: $("msgOverlay").checked }, c)); }
+function sendMsg(c) { send(Object.assign({ cmd: "screen_msg", screens: WEB || $("msgScreens").checked, overlay: WEB || $("msgOverlay").checked }, c)); }
 function renderMsg() {
   const m = S.msg, on = !!(m && (m.screens || m.overlay));
   $("msgOn").hidden = !on; $("msgDot").hidden = !on;
   if (on) {
-    const where = "sangat screen";
+    const where = WEB ? "sangat screen" : m.screens && m.overlay ? "projector, TV and livestream" : m.screens ? "projector and TV" : "livestream";
     const what = m.kind === "image" ? "a picture" : m.kind === "vaheguru" ? "ਵਾਹਿਗੁਰੂ" : `"${m.text}"`;
     $("msgOnText").textContent = `Showing ${what} on the ${where}`;
     $("msgOnImg").hidden = m.kind !== "image";
@@ -493,20 +607,21 @@ function renderMsg() {
   }
   $("msgRecent").replaceChildren(...S.recentTexts.map(t => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.title = t;
-    if (/[\u0A00-\u0A7F]/.test(t)) b.classList.add("gur");
+    if (/[਀-੿]/.test(t)) b.classList.add("gur");
     b.onclick = () => sendMsg({ kind: "text", text: t });
     return b;
   }));
   $("msgPics").replaceChildren(...S.recentImages.map(n => {
     const d = document.createElement("div"); d.className = "pic";
     const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", "Show this picture");
-    const im = document.createElement("img"); im.src = LOCAL.imageURL(n); im.alt = ""; b.appendChild(im);
+    const im = document.createElement("img"); im.src = imageURL(n); im.alt = ""; b.appendChild(im);
     b.onclick = () => sendMsg({ kind: "image", image: n });
-    const x = document.createElement("button"); x.type = "button"; x.className = "forget"; x.textContent = "\u00d7";
+    const x = document.createElement("button"); x.type = "button"; x.className = "forget"; x.textContent = "×";
     x.setAttribute("aria-label", "Remove this picture from the list");
     x.onclick = () => send({ cmd: "screen_msg", kind: "forget_image", image: n });
     d.append(b, x); return d;
   }));
+  if (WEB) renderSangat();
 }
 // a photo from the phone: made smaller first (phone photos are large), as a JPEG the
 // laptop can always show (this also turns an iPhone's HEIC photo into a JPEG)
@@ -533,11 +648,18 @@ $("msgPick").onclick = () => $("msgFile").click();
 $("msgFile").onchange = async () => {
   const f = $("msgFile").files[0]; $("msgFile").value = "";
   if (!f) return;
-  banner("Sending the picture\u2026");
+  if (WEB) {                              // pictures stay on this phone
+    try { const name = LOCAL.saveImage(await shrink(f)); banner(""); sendMsg({ kind: "image", image: name }); }
+    catch (e) { banner("That picture could not be used."); }
+    return;
+  }
+  banner("Sending the picture…");
   try {
-    const name = LOCAL.saveImage(await shrink(f));
-    banner(""); sendMsg({ kind: "image", image: name });
-  } catch (e) { banner("That picture could not be used."); }
+    const r = await fetch("/api/message-image", { method: "POST", body: await shrink(f) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { banner(j.error || "That picture could not be used."); return; }
+    banner(""); sendMsg({ kind: "image", image: j.image });
+  } catch (e) { banner("That picture could not be sent to the console. Check this phone is on the same Wi-Fi."); }
 };
 $("msgOnBack").onclick = () => send({ cmd: "screen_msg", kind: null });
 ["msgScreens", "msgOverlay"].forEach(id => $(id).addEventListener("change", () => {
@@ -545,13 +667,13 @@ $("msgOnBack").onclick = () => send({ cmd: "screen_msg", kind: null });
   if (m) sendMsg(m.kind === "image" ? { kind: "image", image: m.image.split("/").pop() } : { kind: m.kind, text: m.text });
 }));
 
-/* ---------------- tabs, search, history ---------------- */
+/* ---------------- views, search, history ---------------- */
 function tab(name) {
   document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
-  $("tab-now").hidden = name !== "now"; $("tab-search").hidden = name !== "search"; $("tab-history").hidden = name !== "history";
-  $("tab-msg").hidden = name !== "msg";
+  for (const t of ["now", "search", "history", "msg"]) $("tab-" + t).hidden = name !== t;
   if (name === "search") setTimeout(() => $("q").focus(), 50);
   scrollTo(0, 0);
+  if (name === "now") { S.lastAkv = null; render(); }
 }
 document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => tab(b.dataset.tab));
 const Q = { id: 0, timer: null, mode: "auto", hint: document.getElementById("qHint").textContent };
@@ -570,7 +692,7 @@ const STTM = { a: "ੳ", A: "ਅ", e: "ੲ", E: "ਓ", s: "ਸ", S: "ਸ਼", h:
   "^": "ਖ਼", "&": "ਫ਼", w: "ਾ", i: "ਿ", I: "ੀ", u: "ੁ", U: "ੂ", y: "ੇ", Y: "ੈ", o: "ੋ", O: "ੌ", M: "ੰ", N: "ਂ",
   W: "ਾਂ", "`": "ੱ", "~": "ੱ", R: "੍ਰ", H: "੍ਹ" };
 const LETTER_ONLY = { i: "ੲ", I: "ੲ", u: "ੳ", U: "ੳ", o: "ੳ", O: "ੳ", E: "ੳ" };   // first letters: vowel keys mean their letter
-const CONSONANT = new Set([..."ੲਸਹਕਖਗਘਙਚਛਜਝਞਟਠਡਢਣਤਥਦਧਨਪਫਬਭਮਯਰਲਵੜ\u0A36\u0A59\u0A5A\u0A5B\u0A5E\u0A33"]);
+const CONSONANT = new Set([..."ੲਸਹਕਖਗਘਙਚਛਜਝਞਟਠਡਢਣਤਥਦਧਨਪਫਬਭਮਯਰਲਵੜਸ਼ਖ਼ਗ਼ਜ਼ਫ਼ਲ਼"]);
 const PRECOMPOSE = [["ਅਾ", "ਆ"], ["ੲਿ", "ਇ"], ["ੲੀ", "ਈ"], ["ੲੇ", "ਏ"], ["ਅੈ", "ਐ"], ["ੳੁ", "ਉ"], ["ੳੂ", "ਊ"], ["ਅੌ", "ਔ"], ["ੳੋ", "ਓ"]];
 const K = { pend: false, att: false };          // a sihari typed before its letter; one just placed after it
 function sttmType(before, text, letters) {
@@ -613,12 +735,12 @@ const VOWELS = [..."ਆਇਈਉਊਏਐਓਔ"], SIGNS = [..."ਾਿੀੁੂ�
 function buildKeyboard() {
   const k = $("gkbd"); if (k.childElementCount) return;
   const key = (ch, label) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label || ch; b.onclick = () => typeKey(ch); return b; };
-  const grid = (list, sign) => { const g = document.createElement("div"); g.className = "keys"; list.forEach(ch => g.appendChild(key(ch, sign ? "\u25CC" + ch : ch))); return g; };
+  const grid = (list, sign) => { const g = document.createElement("div"); g.className = "keys"; list.forEach(ch => g.appendChild(key(ch, sign ? "◌" + ch : ch))); return g; };
   const vow = document.createElement("div"); vow.className = "vow";
   const n = document.createElement("small"); n.textContent = "Vowels and vowel signs (for words)";
   vow.append(n, grid(VOWELS), grid(SIGNS, true));
   const row = document.createElement("div"); row.className = "row";
-  [["Space", " "], ["\u232B", "back"], ["Clear", "clear"]].forEach(([l, v]) => row.appendChild(key(v, l)));
+  [["Space", " "], ["⌫", "back"], ["Clear", "clear"]].forEach(([l, v]) => row.appendChild(key(v, l)));
   k.append(grid(AKHAR), grid(PAIR), vow, row);
   updateKeyboardMode();
 }
@@ -651,7 +773,7 @@ function item(g, where, en, onPick, time) {
   if (time) { const t = document.createElement("span"); t.className = "t"; t.textContent = time; w.append(t); }
   w.append(where || "");
   b.append(a, w);
-  if (en) { const e = document.createElement("span"); e.className = "e"; e.textContent = en.length > 110 ? en.slice(0, 108) + "\u2026" : en; b.append(e); }
+  if (en) { const e = document.createElement("span"); e.className = "e"; e.textContent = en.length > 110 ? en.slice(0, 108) + "…" : en; b.append(e); }
   b.onclick = onPick; li.appendChild(b); return li;
 }
 function renderResults(m) {
@@ -672,17 +794,16 @@ function renderHistory(items) {
   }, it.time)));
 }
 
-const VERSION = "2026-10-13a";
-function checkVersion(v) {
-  return;                              // the web version updates with the page itself             // a phone page left open from an older version reloads itself
-  if (!v || v === VERSION) return;
+const VERSION = "2026-10-13b";
+function checkVersion(v) {             // a phone page left open from an older version reloads itself
+  if (WEB || !v || v === VERSION) return;   // (the web version updates with the page itself)
   const u = new URL(location.href);
   if (u.searchParams.get("v") === v) return;
   u.searchParams.set("v", v); location.replace(u.toString());
 }
 
 /* ---------------- this phone as the microphone ---------------- */
-const MIC = { id: null, secure: true, httpsPort: null, on: false, owner: null,
+const MIC = { id: null, secure: WEB || location.protocol === "https:", httpsPort: null, on: false, owner: null,
               actx: null, tap: null, stream: null, node: null, pending: [], pendingLen: 0, level: 0, wake: null };
 const TAP_CODE = `class Tap extends AudioWorkletProcessor {
   constructor() { super(); this.b = new Float32Array(2048); this.n = 0; }
@@ -729,7 +850,10 @@ async function startPhoneMic() {
   MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
   MIC.node = MIC.actx.createMediaStreamSource(MIC.stream); MIC.node.connect(MIC.tap);
   MIC.on = true; MIC.pending = []; MIC.pendingLen = 0;
-  MIC.stream.getAudioTracks()[0].onended = () => { stopPhoneMic(true); banner("This phone's microphone stopped (another app may have taken it). Tap Start listening again."); };
+  MIC.stream.getAudioTracks()[0].onended = () => {
+    stopPhoneMic(true);
+    banner(WEB ? "This phone's microphone stopped (another app may have taken it). Tap Listen again." : "This phone's microphone stopped. The laptop's microphone has taken over.");
+  };
   try { if ("wakeLock" in navigator) MIC.wake = await navigator.wakeLock.request("screen"); } catch (e) { /* not available */ }
   send({ cmd: "mic_take" });
   $("listenPrompt").hidden = true;
@@ -743,34 +867,63 @@ function stopPhoneMic(tellConsole) {
   if (tellConsole) send({ cmd: "mic_release" });
   renderMic();
 }
+function micWords() {                    // whose microphone, for the status
+  if (WEB) return MIC.on ? "listening" : LOCAL.player ? "playing a recording" : "";
+  const o = MIC.owner;
+  if (MIC.on) return "this phone's mic";
+  if (!o) return "";
+  return o.owner === "phone" ? `${o.name}'s mic` : "laptop mic";
+}
 function renderMic() {
   $("listen").setAttribute("aria-pressed", String(MIC.on));
-  $("listen").firstChild.textContent = MIC.on ? "Stop listening" : "Start listening";
-  $("micLine").textContent = MIC.on ? "Listening with this phone's microphone. Keep this page open and the phone unlocked." : "";
+  $("listenText").textContent = MIC.on ? "Listening" : "Listen";
+  $("listen").setAttribute("aria-label", MIC.on ? "Stop listening with this phone" : "Listen with this phone's microphone");
+  $("micLine").textContent = MIC.on ? (WEB ? "Listening with this phone's microphone. Keep this page open and the phone unlocked." : "Listening with this phone's microphone. Keep this page open and the phone unlocked.") : "";
+  $("statusSub").textContent = micWords();
+  if (WEB) render();
 }
 $("listen").onclick = async () => {
   if (MIC.on) { stopPhoneMic(true); return; }
-  if (LOCAL.player) stopTry();
+  if (WEB && LOCAL.player) stopTry();
+  if (!MIC.secure) {
+    if (!MIC.httpsPort) { banner("This console can't offer a secure address, so phones can't be the microphone. Check the log on the laptop."); return; }
+    $("secureSheet").hidden = false; tab("now"); scrollTo(0, 0); return;
+  }
   try { await startPhoneMic(); }
-  catch (e) { stopPhoneMic(false); banner("The microphone couldn't be opened. In Safari, tap aA in the address bar, then Website Settings, and allow the Microphone; then try again."); }
+  catch (e) {
+    stopPhoneMic(false);
+    banner(WEB ? "The microphone couldn't be opened. In Safari, tap aA in the address bar, then Website Settings, and allow the Microphone; then try again."
+               : "The microphone couldn't be opened. Allow microphone access for this page in the browser's settings, then try again.");
+  }
 };
 $("secureGo").onclick = () => { location.href = `https://${location.hostname}:${MIC.httpsPort}/phone?listen=1`; };
 $("secureClose").onclick = () => { $("secureSheet").hidden = true; };
-if (MIC.secure && new URLSearchParams(location.search).get("listen") === "1") $("listenPrompt").hidden = false;
+if (!WEB && MIC.secure && new URLSearchParams(location.search).get("listen") === "1") $("listenPrompt").hidden = false;
+
+/* ---------------- the menu ---------------- */
+function sheet(id, open) { $(id).hidden = !open; document.body.style.overflow = open ? "hidden" : ""; }
+$("menuBtn").onclick = () => sheet("menu", true);
+$("menuClose").onclick = () => sheet("menu", false);
+["menu", "setSheet", "tvSheet"].forEach(id => $(id).addEventListener("click", (e) => { if (e.target === $(id)) sheet(id, false); }));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") ["menu", "setSheet", "tvSheet"].forEach(id => sheet(id, false)); });
+let armed = null;
+function disarm() { clearTimeout(armed); armed = null; $("reset").classList.remove("armed"); $("resetText").textContent = "Start over"; $("resetNote").textContent = "Clears the screen and listens afresh (asks to confirm)"; }
+$("reset").onclick = () => {
+  if (armed) { disarm(); send({ cmd: "reset" }); sheet("menu", false); tab("now"); return; }
+  $("reset").classList.add("armed"); $("resetText").textContent = "Tap again to start over"; $("resetNote").textContent = "The screen is cleared and listening begins afresh";
+  armed = setTimeout(disarm, 4000);
+};
 
 /* ---------------- casting (the laptop casts; this phone chooses) ---------------- */
-$("castBtn").onclick = () => {
-  const open = $("castSheet").hidden;
-  $("castSheet").hidden = !open;
-  if (open) { tab("now"); send({ cmd: "cast_scan" }, true); }
-};
+$("menuCast").onclick = () => { sheet("menu", false); tab("now"); $("castSheet").hidden = false; send({ cmd: "cast_scan" }, true); scrollTo(0, 0); };
 $("castClose").onclick = () => { $("castSheet").hidden = true; };
 $("castStop").onclick = () => send({ cmd: "cast_stop" });
 function renderCast(m) {
   const a = m.active;
-  $("castBtn").classList.toggle("on", !!a && a.mode !== "starting");
+  $("menuDot").hidden = !(a && a.mode !== "starting");
+  $("menuCastNote").textContent = a ? (a.mode === "starting" ? `Starting on ${a.name}…` : `Casting to ${a.name}`) : "The laptop casts to a Chromecast; choose which";
   $("castNow").hidden = !a;
-  if (a) $("castNowText").textContent = a.mode === "starting" ? `Starting on ${a.name}\u2026 (up to half a minute)`
+  if (a) $("castNowText").textContent = a.mode === "starting" ? `Starting on ${a.name}… (up to half a minute)`
     : `Casting to ${a.name}` + (a.mode === "pictures" ? " (a picture of each line)" : "");
   const devs = m.devices || [];
   $("castList").replaceChildren(...devs.map(d => {
@@ -783,10 +936,11 @@ function renderCast(m) {
   $("castNote").textContent = !m.available ? "Casting isn't available on this computer."
     : m.error ? m.error
     : devs.length ? "Pick one. The laptop does the casting, so this phone can go back to controlling."
-    : "Looking for Chromecasts on the laptop's Wi-Fi\u2026 Make sure the TV is on.";
+    : "Looking for Chromecasts on the laptop's Wi-Fi… Make sure the TV is on.";
 }
 
-var receive = function (m) {
+/* ---------------- messages from the console ---------------- */
+function receive(m) {
   if (m.type === "cast") renderCast(m);
   if (m.type === "screen_msg") { S.msg = m.msg; S.recentImages = m.recent_images || []; S.recentTexts = m.recent_texts || []; renderMsg(); }
   if (m.type === "notice" && m.message) { const msg = m.message; banner(msg); setTimeout(() => { if ($("banner").textContent === msg) banner(""); }, 15000); }
@@ -797,6 +951,7 @@ var receive = function (m) {
     renderMic();
   }
   if (m.type === "mic_lost") { stopPhoneMic(false); banner("This phone stopped sending sound, so the laptop's microphone took over. Keep this page open and the phone unlocked while it listens."); }
+  if (m.type === "settings") { S.settings = Object.assign({}, S.settings, m.settings || {}); applySettings(); }
   if (m.type === "hello" || m.type === "loading") checkVersion(m.version);
   if (m.type === "hello") {
     S.banis = m.banis || [];
@@ -807,16 +962,22 @@ var receive = function (m) {
   else if (m.type === "search_results") { if (m.id === Q.id) renderResults(m); }
   else if (m.type === "track") S.tracks[m.track.id] = m.track;
   else if (m.type === "state") S.state = m;
-  else if (m.type === "loading") $("statusText").textContent = "Getting ready";
+  else if (m.type === "loading") $("statusText").textContent = WEB ? "Getting ready" : "The console is starting";
 }
+function applySettings() {                // (the web version's settings sheet shows them)
+  document.querySelectorAll("[data-set]").forEach(i => { i.checked = S.settings[i.dataset.set] !== false && !!S.settings[i.dataset.set]; });
+  document.querySelectorAll("[data-choice]").forEach(i => { if (S.settings[i.dataset.choice]) i.value = S.settings[i.dataset.choice]; });
+}
+document.querySelectorAll("[data-set]").forEach(i => i.onchange = () => send({ cmd: "settings", [i.dataset.set]: i.checked }, true));
+document.querySelectorAll("[data-choice]").forEach(i => i.onchange = () => send({ cmd: "settings", [i.dataset.choice]: i.value }, true));
 
 function connect() {
-  ws = new LOCAL.Socket("local");
+  ws = WEB ? new LOCAL.Socket("local") : new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?role=remote`);
   ws.onopen = () => { banner(""); disconnected = false; };
   ws.onmessage = (ev) => { receive(JSON.parse(ev.data)); render(); };
   ws.onclose = (ev) => {
     if (ev.code === 4003) { disconnected = true; banner("The console disconnected this phone."); }
-    else if (!disconnected) banner("Lost the connection to the console. Reconnecting\u2026 Check this phone is on the same Wi-Fi as the computer.");
+    else if (!disconnected) banner("Lost the connection to the console. Reconnecting… Check this phone is on the same Wi-Fi as the computer.");
     $("statusText").textContent = "Not connected";
     setTimeout(connect, 2500);
   };
@@ -825,27 +986,21 @@ function connect() {
 $("hold").onclick = () => send({ cmd: "hold", on: $("hold").getAttribute("aria-pressed") !== "true" });
 $("back").onclick = () => send({ cmd: "step", delta: -1 });
 $("fwd").onclick = () => send({ cmd: "step", delta: 1 });
-let armed = null;
-$("reset").onclick = () => {
-  if (armed) { clearTimeout(armed); armed = null; $("reset").classList.remove("armed"); $("reset").textContent = "Start over"; send({ cmd: "reset" }); return; }
-  $("reset").classList.add("armed"); $("reset").textContent = "Tap again to start over";
-  armed = setTimeout(() => { armed = null; $("reset").classList.remove("armed"); $("reset").textContent = "Start over"; }, 3000);
-};
-document.querySelectorAll(".seg button").forEach(b => b.onclick = () =>
-  send({ cmd: "mode", mode: b.dataset.mode, bani_id: b.dataset.mode === "paath" ? ($("bani").value || null) : null,
-         sehaj: b.dataset.mode === "paath" && $("sehaj").checked }));
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  if (b.getAttribute("aria-pressed") === "true") return;            // already chosen (Start over begins again)
+  const m = b.dataset.mode;
+  send(m === "akhand" ? { cmd: "mode", mode: "paath", bani_id: null, sehaj: true }
+     : m === "paath" ? { cmd: "mode", mode: "paath", bani_id: null, sehaj: false }
+     : { cmd: "mode", mode: "kirtan", bani_id: null, sehaj: false });
+});
 $("bani").onchange = () => send({ cmd: "mode", mode: "paath", bani_id: $("bani").value || null, sehaj: false });
-$("sehaj").onchange = () => send({ cmd: "mode", mode: "paath", bani_id: null, sehaj: $("sehaj").checked });
-$("akvOn").onchange = () => send({ cmd: "akv", action: $("akvOn").checked ? "start" : "end" });
+$("akvChip").onclick = () => send({ cmd: "akv", action: $("akvChip").getAttribute("aria-pressed") === "true" ? "end" : "start" });
 $("akvResume").onclick = () => send({ cmd: "akv", action: "resume" });
 $("akvNext").onclick = () => send({ cmd: "akv", action: "next" });
 $("akvEnd").onclick = () => send({ cmd: "akv", action: "end" });
 $("akvSugBtn").onclick = () => send({ cmd: "akv", action: "start" });
 
-connect();
-render();
-
-/* ---------------- web version: start-up, sangat screen, recordings ---------------- */
+/* ---------------- web: getting ready, a recording, the sangat screen, settings ---------------- */
 function pctOf(text) { const m = /(\d+)%/.exec(text || ""); return m ? +m[1] : null; }
 function renderStart() {
   const L = LOCAL;
@@ -860,30 +1015,10 @@ function renderStart() {
   const ready = L.ready.asr && L.ready.engine;
   $("startBox").hidden = ready && !L.error;
   $("listen").disabled = !ready;
-  $("tryPick").disabled = !ready;
+  $("menuTry").disabled = !ready;
 }
-LOCAL.on((kind) => { if (kind === "progress" || kind === "ready" || kind === "error") renderStart(); });
-renderStart();
-
-function stopTry() { LOCAL.stopFile(); $("tryStop").hidden = true; $("tryPick").hidden = false; $("tryNote").hidden = true; }
-$("tryPick").onclick = () => $("tryFile").click();
-$("tryStop").onclick = stopTry;
-$("tryFile").onchange = async () => {
-  const f = $("tryFile").files[0]; $("tryFile").value = "";
-  if (!f) return;
-  if (MIC.on) stopPhoneMic(true);
-  $("tryNote").hidden = false; $("tryNote").textContent = "Reading the recording…";
-  try {
-    const pl = await LOCAL.playFile(f, () => { stopTry(); banner("The recording has finished."); });
-    $("tryPick").hidden = true; $("tryStop").hidden = false;
-    const tick = setInterval(() => {
-      if (!LOCAL.player) { clearInterval(tick); return; }
-      const s = Math.floor(LOCAL.player.pos), d = Math.floor(pl.duration);
-      $("tryNote").textContent = `Playing ${f.name} through the app: ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} of ${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")} (silently)`;
-    }, 1000);
-  } catch (e) { $("tryNote").textContent = "That file couldn't be read. Try an MP3, M4A or WAV."; }
-};
-
+function stopTry() { LOCAL.stopFile(); $("tryCard").hidden = true; render(); }
+let wake = null;
 function renderSangat() {
   if ($("sangat").hidden) return;
   const st = S.state, m = S.msg;
@@ -901,25 +1036,52 @@ function renderSangat() {
   if (!track || pos === null || pos === undefined) { $("sgG").textContent = "ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥"; $("sgEn").textContent = ""; $("sgNx").textContent = ""; $("sgWhere").textContent = ""; return; }
   const Ls = track.lines, line = Ls[pos] || {};
   const np = st.next_pos !== undefined && st.next_pos !== null ? st.next_pos : (pos + 1 < Ls.length ? pos + 1 : null);
-  const set = SETTINGS_WEB();
   $("sgG").textContent = line.g || "";
-  $("sgEn").textContent = set.en === false ? "" : (line.en || "");
-  $("sgNx").textContent = set.next === false || np === null || !Ls[np] ? "" : Ls[np].g;
+  $("sgEn").textContent = S.settings.en === false ? "" : (line.en || "");
+  $("sgNx").textContent = S.settings.next === false || np === null || !Ls[np] ? "" : Ls[np].g;
   $("sgWhere").textContent = [line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.kind === "bani" ? track.subtitle : ""].filter(Boolean).join(" · ");
 }
-let WEB_SETTINGS = {};
-const SETTINGS_WEB = () => WEB_SETTINGS;
-LOCAL.on(() => {});
-const _recv = receive;
-receive = function (m) { if (m.type === "settings") WEB_SETTINGS = m.settings || {}; _recv(m); };
-const _render = render;
-render = function () { _render(); renderSangat(); };
-let wake = null;
-$("screenBtn").onclick = async () => {
-  $("sangat").hidden = false; renderSangat();
-  try { if ("wakeLock" in navigator && !wake) wake = await navigator.wakeLock.request("screen"); } catch (e) { /* not offered */ }
-};
-$("sgClose").onclick = () => { $("sangat").hidden = true; if (wake && !MIC.on) { wake.release().catch(() => {}); wake = null; } };
+if (WEB) {
+  document.title = "Gurbani Audio Searcher";
+  $("statusText").textContent = "Getting ready";
+  $("empty").textContent = "Nothing is on the screen yet. Tap Listen below; the Gurbani appears here as soon as the kirtan or paath is recognised.";
+  $("msgIntro").textContent = "Shows on the sangat screen instead of the Gurbani. Listening carries on; \"Back to Gurbani\" returns to the current line.";
+  $("whereTo").hidden = true;
+  $("menuCast").hidden = true;
+  for (const id of ["menuScreen", "menuTv", "menuSettings", "menuTry"]) $(id).hidden = false;
+  LOCAL.on((kind) => { if (kind === "progress" || kind === "ready" || kind === "error") renderStart(); });
+  renderStart();
+  $("menuTry").onclick = () => $("tryFile").click();
+  $("tryStop").onclick = stopTry;
+  $("tryFile").onchange = async () => {
+    const f = $("tryFile").files[0]; $("tryFile").value = "";
+    sheet("menu", false); tab("now");
+    if (!f) return;
+    if (MIC.on) stopPhoneMic(true);
+    $("tryCard").hidden = false; $("tryNote").textContent = "Reading the recording…";
+    try {
+      const pl = await LOCAL.playFile(f, () => { stopTry(); banner("The recording has finished."); });
+      render();
+      const tick = setInterval(() => {
+        if (!LOCAL.player) { clearInterval(tick); return; }
+        const s = Math.floor(LOCAL.player.pos), d = Math.floor(pl.duration);
+        $("tryNote").textContent = `Playing ${f.name} through the app: ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} of ${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")} (silently)`;
+      }, 1000);
+    } catch (e) { $("tryNote").textContent = "That file couldn't be read. Try an MP3, M4A or WAV."; }
+  };
+  $("menuScreen").onclick = async () => {
+    sheet("menu", false); $("sangat").hidden = false; renderSangat();
+    try { if ("wakeLock" in navigator && !wake) wake = await navigator.wakeLock.request("screen"); } catch (e) { /* not offered */ }
+  };
+  $("sgClose").onclick = () => { $("sangat").hidden = true; if (wake && !MIC.on) { wake.release().catch(() => {}); wake = null; } };
+  $("menuTv").onclick = () => { sheet("menu", false); sheet("tvSheet", true); };
+  $("tvClose").onclick = () => sheet("tvSheet", false);
+  $("menuSettings").onclick = () => { sheet("menu", false); applySettings(); sheet("setSheet", true); };
+  $("setClose").onclick = () => sheet("setSheet", false);
+}
+
+connect();
+render();
 })();
 </script>
 </body>

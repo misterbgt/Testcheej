@@ -13,20 +13,24 @@ laptop app's own engine run inside the page, and nothing it hears is sent anywhe
 1. Open the address above in Safari, on Wi-Fi. The first time, it downloads about 200 MB
    (mostly the speech model, which is then kept on the phone). Getting ready takes about
    half a minute after that.
-2. Tap **Start listening** and allow the microphone. Keep the page open and the phone
+2. Tap **Listen** (bottom right) and allow the microphone. Keep the page open and the phone
    unlocked; place it near the speakers.
-3. **Sangat screen** shows the current line full screen (for screen mirroring to a TV).
-4. Kirtan / Paath, Akhand / Sehaj Paath, Asa Ki Vaar, Search, History and the ਵਾਹਿਗੁਰੂ /
-   message / picture screen work as on the laptop app's phone controller.
-5. **Play a recording** tries it with an audio file instead of the microphone.
+3. Choose Kirtan, Paath or Akhand (Akhand or Sehaj Paath) at the top; in Kirtan,
+   **Asa Ki Vaar** follows the Vaar in the order it is sung.
+4. Previous, Pause, Next and Listen are along the bottom, with the Now, Search, History
+   and Message tabs. The menu (the three lines, top right) has **Sangat screen** (the
+   current line full screen, for mirroring to a TV), **Show on a TV** (how to mirror),
+   **Settings**, **Play a recording** (try it with an audio file instead of the
+   microphone) and **Start over**.
 
 Tip: Share → Add to Home Screen gives it its own icon.
 
 ## What is here
 
-Version ਅ੨ (build 2026-10-13a), the same as the laptop app.
+Version ਅ੩ (build 2026-10-13b), the same as the laptop app.
 
-- `index.html`: the page (the laptop app's phone controller, made by `src/make_index.py`).
+- `index.html`: the page: the laptop app's phone controller, which has the web version built in
+  (`src/make_index.py` adds `local.js` to it).
 - `local.js`: connects the page to the two workers below instead of the laptop.
 - `asr-worker.js`: the speech model (onnxruntime-web 1.18, the build without shared memory), loaded from Karanbir Singh's
   Hugging Face page and kept in the phone's cache.
