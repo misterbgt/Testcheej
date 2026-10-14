@@ -23,11 +23,15 @@ laptop app's own engine run inside the page, and nothing it hears is sent anywhe
    **Settings**, **Play a recording** (try it with an audio file instead of the
    microphone) and **Start over**.
 
+While it is listening and has not yet found the shabad, the logo grows and shrinks with the
+sound, so you can see it is hearing; once a shabad is on the screen it stays still
+(Settings → Sound turns this off).
+
 Tip: Share → Add to Home Screen gives it its own icon.
 
 ## What is here
 
-Version ਅ੪ (build 2026-10-14a), the same as the laptop app.
+Version ਅ੫ (build 2026-10-14b), the same as the laptop app.
 
 - `index.html`: the page: the laptop app's phone controller, which has the web version built in
   (`src/make_index.py` adds `local.js` to it).
@@ -42,12 +46,6 @@ Version ਅ੪ (build 2026-10-14a), the same as the laptop app.
 - `vocab.json`: the speech model's word pieces.
 
 Everything here is built by `src/build.py` from the app's source (its `web/` folder).
-
-**Sound test (web only, 2026-10-13):** `index.html` has a trial of a sound picture, added
-here directly and not yet in the app's source (`pages/phone.html`): the logo grows and
-shrinks with the sound, and a strip on the Now tab shows how loud it has been since the page
-opened (one number every 0.1 s; no sound is kept), coloured by what the app was doing, with a
-mark wherever the screen moved to another shabad. Settings → Sound turns either off.
 
 ## Credits and licence
 

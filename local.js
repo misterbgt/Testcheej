@@ -7,7 +7,7 @@
   "use strict";
   const P = new URLSearchParams(location.search);
   const here = (p) => new URL(p, location.href).href;
-  const BUILD = "2026-10-14a";             // (app/__init__.py) in every file name the page asks for: no old copies mixed in
+  const BUILD = "2026-10-14b";             // (app/__init__.py) in every file name the page asks for: no old copies mixed in
   const CFG = {
     build: BUILD,
     pyodide: P.has("local") ? here("vendor/pyodide/") : "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
