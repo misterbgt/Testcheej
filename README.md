@@ -27,7 +27,7 @@ Tip: Share → Add to Home Screen gives it its own icon.
 
 ## What is here
 
-Version ਅ੩ (build 2026-10-13b), the same as the laptop app.
+Version ਅ੪ (build 2026-10-14a), the same as the laptop app.
 
 - `index.html`: the page: the laptop app's phone controller, which has the web version built in
   (`src/make_index.py` adds `local.js` to it).
