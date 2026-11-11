@@ -993,8 +993,25 @@ async function startPhoneMic() {
     MIC.tap.connect(mute);
   }
   if (MIC.actx.state === "suspended") await MIC.actx.resume();
-  MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-  MIC.node = MIC.actx.createMediaStreamSource(MIC.stream); MIC.node.connect(MIC.tap);
+  const AUDIO = { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+  MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO });
+  // CarPlay / Bluetooth: the phone may hand the car's microphone to the page, which also cuts the car's
+  // music. Ask for the phone's own microphone instead (it is the one called "iPhone Microphone").
+  try {
+    const own = /iphone|ipad|built-in|internal|phone/i, car = /car|bluetooth|carplay|hands.?free|headset|airpods|hfp/i;
+    const cur = MIC.stream.getAudioTracks()[0];
+    if (!own.test(cur.label) || car.test(cur.label)) {
+      const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput");
+      const mine = devs.find(d => own.test(d.label) && !car.test(d.label));
+      if (mine && mine.deviceId && mine.label !== cur.label) {
+        MIC.stream.getTracks().forEach(t => t.stop());
+        try { MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: Object.assign({ deviceId: { exact: mine.deviceId } }, AUDIO) }); }
+        catch (e2) { MIC.stream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO }); }
+      }
+    }
+    if (navigator.audioSession) navigator.audioSession.type = "play-and-record";
+  } catch (e) { /* keep whatever microphone we were given */ }
+  MIC.node =MIC.actx.createMediaStreamSource(MIC.stream); MIC.node.connect(MIC.tap);
   MIC.on = true; MIC.pending = []; MIC.pendingLen = 0;
   MIC.stream.getAudioTracks()[0].onended = () => {
     stopPhoneMic(true);
