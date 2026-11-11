@@ -473,7 +473,7 @@ ol { list-style: none; margin: 0; padding: 0; }
   <div class="foot"><span id="sgWhere"></span><button type="button" id="sgClose">Close</button></div>
 </div>
 
-<script src="local.js?v=2026-10-14b"></script>
+<script src="local.js?v=2026-11-11a"></script>
 <script>
 (() => {
 "use strict";
@@ -824,7 +824,7 @@ function renderHistory(items) {
   }, it.time)));
 }
 
-const VERSION = "2026-10-14b";
+const VERSION = "2026-11-11a";
 function checkVersion(v) {             // a phone page left open from an older version reloads itself
   if (WEB || !v || v === VERSION) return;   // (the web version updates with the page itself)
   const u = new URL(location.href);
