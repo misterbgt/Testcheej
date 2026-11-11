@@ -1180,7 +1180,8 @@ function renderSangatBody() {
   $("sgEn").textContent = S.settings.en === false ? "" : (line.en || "");
   $("sgNx").textContent = S.settings.next === false || np === null || !Ls[np] ? "" : Ls[np].g;
   const where = track.kind === "bani" ? [line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.subtitle].filter(Boolean).join(" · ") : (track.subtitle || (line.ang ? `Ang ${line.ang}` : ""));
-  const title = track.kind === "shabad" && pos > 0 && track.title && track.title !== line.g ? track.title : "";    // the shabad's name, once the screen is past its first line
+  const plain = (t) => String(t || "").replace(/[॥੦-੯0-9\s]/g, "");        // the title is the first tuk without its ॥ and number
+  const title = track.kind === "shabad" && pos > 0 && track.title && plain(track.title) !== plain(line.g) ? track.title : "";    // the shabad's name, once the screen is past its first tuk
   $("sgWhere").textContent = [title, where].filter(Boolean).join("\n");
 }
 /* ---------------- web: the full display (the home screen) ---------------- */
@@ -1288,7 +1289,7 @@ function copyPayload(kind) {
   let part = Ls;                                   // the whole shabad (for a bani: the shabad the line belongs to)
   if (track.kind !== "shabad" && line.sid !== undefined && line.sid !== null) part = Ls.filter(l => l.sid === line.sid);
   if (part.length > 400) part = Ls.slice(Math.max(0, pos - 20), pos + 21);
-  return [track.kind === "shabad" ? track.title : (line.st || ""), ...part.map(l => [l.g, l.en].filter(Boolean).join("\n")), track.kind === "shabad" ? track.subtitle : [ang, track.subtitle].filter(Boolean).join(" · ")].filter(Boolean).join("\n\n");
+  return [...part.map(l => [l.g, l.en].filter(Boolean).join("\n")), track.kind === "shabad" ? track.subtitle : [ang, track.subtitle].filter(Boolean).join(" · ")].filter(Boolean).join("\n\n");
 }
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); }
