@@ -542,7 +542,6 @@ ol { list-style: none; margin: 0; padding: 0; }
     <span class="sgbreak"></span>
     <button type="button" class="sgbtn" id="sgFullBtn">Full shabad</button>
     <button type="button" class="sgbtn" id="sgRoman" aria-pressed="false">Roman</button>
-    <button type="button" class="sgbtn" id="sgSttm">SikhiToTheMax</button>
   </div>
   <div class="sgwhere" id="sgWhere"></div>
   <p class="sghint" id="sgHint" hidden>Press and hold a line to copy or share it</p>
@@ -1226,7 +1225,7 @@ function sgSync() {
   const held = $("hold").getAttribute("aria-pressed") === "true";
   $("sgFaintText").textContent = !hearing ? "Not listening" : held ? "Paused" : S.found ? "Still listening" : "Listening";
   $("sgHold").setAttribute("aria-pressed", String(held)); $("sgHoldText").textContent = $("holdText").textContent;
-  for (const id of ["sgHold", "sgPrev", "sgNext", "sgFullBtn", "sgSttm"]) $(id).disabled = !S.found;
+  for (const id of ["sgHold", "sgPrev", "sgNext", "sgFullBtn"]) $(id).disabled = !S.found;
   $("sgRoman").setAttribute("aria-pressed", String(PREF.tr));
   $("sgStage").style.setProperty("--sz", (PREF.size / 100).toFixed(2));
   if (sgPinned()) { $("sgStage").classList.remove("idle"); clearTimeout(SG.t); } else if (was) sgShow();
@@ -1378,11 +1377,6 @@ $("sgSmaller").onclick = () => { PREF.size = Math.max(70, PREF.size - 10); saveP
 $("sgBigger").onclick = () => { PREF.size = Math.min(170, PREF.size + 10); savePref(); sgSync(); sgFit(); };
 $("sgRoman").onclick = () => { PREF.tr = !PREF.tr; savePref(); renderSangat(); };
 $("sgFullBtn").onclick = openFull;
-$("sgSttm").onclick = () => {
-  const c = sgCurrent(); const sid = c.track && (c.line.sid || c.track.sid);
-  if (!sid) { sgToast("No SikhiToTheMax page for this one"); return; }
-  window.open(`https://www.sikhitothemax.org/shabad?id=${encodeURIComponent(sid)}`, "_blank", "noopener");
-};
 /* ---------------- web: the logo moves with the sound until the shabad is found ---------------- */
 const loud = (rms) => rms > 0 ? Math.max(0, Math.min(1, (20 * Math.log10(rms) + 54) / 44)) : 0;   // -54 dB .. -10 dB
 function logoActive() { return WEB && LOGO.on && !S.found && (MIC.on || !!LOCAL.player); }
