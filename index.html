@@ -248,22 +248,44 @@ ol { list-style: none; margin: 0; padding: 0; }
 .sgstage { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; --u: 100vmin; --fit: 1; overflow: hidden; }
 .sangat .body { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: calc(var(--u) * .03); text-align: center; overflow: hidden;
   padding: calc(var(--u) * .16 + var(--st, 0px)) calc(var(--u) * .07 + var(--sr, 0px)) calc(var(--u) * .2 + var(--sb, 0px)) calc(var(--u) * .07 + var(--sl, 0px)); }
-.sangat .g { font-family: var(--gur); font-size: calc(var(--u) * .12 * var(--fit)); line-height: 1.35; color: #FFFFFF; margin: 0; text-wrap: balance; }
-.sangat .en { font-size: calc(var(--u) * .052 * var(--fit)); line-height: 1.35; color: #F2D9A6; margin: 0; text-wrap: balance; }
-.sangat .nx { font-family: var(--gur); font-size: calc(var(--u) * .055 * var(--fit)); line-height: 1.35; color: #8EA0BF; margin: 0; text-wrap: balance; }
+.sangat .g { font-family: var(--gur); font-size: calc(var(--u) * .12 * var(--fit) * var(--sz, 1)); line-height: 1.35; color: #FFFFFF; margin: 0; text-wrap: balance; }
+.sangat .tr { font-size: calc(var(--u) * .05 * var(--fit) * var(--sz, 1)); line-height: 1.35; color: #BFD0EA; margin: 0; font-style: italic; text-wrap: balance; }
+.sangat .tr:empty { display: none; }
+.sangat .en { font-size: calc(var(--u) * .052 * var(--fit) * var(--sz, 1)); line-height: 1.35; color: #F2D9A6; margin: 0; text-wrap: balance; }
+.sangat .nx { font-family: var(--gur); font-size: calc(var(--u) * .055 * var(--fit) * var(--sz, 1)); line-height: 1.35; color: #8EA0BF; margin: 0; text-wrap: balance; }
 .sangat .msg { font-family: var(--gur); font-size: calc(var(--u) * .2 * var(--fit)); color: #F2A33A; margin: 0; }
 .sangat .msgtext { font-family: var(--ui); font-size: calc(var(--u) * .1 * var(--fit)); color: #FFFFFF; margin: 0; }
 .sangat img { max-width: 100%; max-height: 70%; object-fit: contain; align-self: center; }
-.sgwhere { position: absolute; left: 0; right: 0; bottom: calc(var(--u) * .025); text-align: center; color: #6F82A3; font-size: max(12px, calc(var(--u) * .03)); padding: 0 16px; pointer-events: none; }
+.sgbreak { flex-basis: 100%; height: 0; }
+@media (min-aspect-ratio: 3/2) { .sgbreak { display: none; } }
+.sgfaint { position: absolute; top: calc(var(--u) * .03 + var(--st, 0px)); left: 0; right: 0; text-align: center; color: #6F82A3; font-size: max(11px, calc(var(--u) * .028)); z-index: 1; pointer-events: none; transition: opacity .35s; }
+.sgfaint .dot { display: inline-block; width: 6px; height: 6px; margin-right: 6px; vertical-align: 1px; }
+.sgstage:not(.idle) .sgfaint, .sgstage.nobottom .sgfaint { opacity: 0; }
+.sghint { position: absolute; left: 0; right: 0; bottom: calc(var(--u) * .24); margin: 0; text-align: center; color: #8EA0BF; font-size: 13px; pointer-events: none; z-index: 1; }
+.sgmask { position: absolute; inset: 0; z-index: 6; background: rgba(11, 19, 36, .72); display: flex; align-items: center; justify-content: center; }
+.sgmenu { background: #172642; border: 1px solid #2A3C5E; border-radius: 14px; overflow: hidden; width: min(86%, 340px); }
+.sgmenu button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-bottom: 1px solid #2A3C5E; background: transparent; color: #F3F1EC; font-size: 17px; padding: 14px 18px; text-align: left; min-height: 52px; }
+.sgmenu button:last-child { border-bottom: 0; }
+.sgfull { position: absolute; inset: 0; z-index: 7; background: #0B1324; display: flex; flex-direction: column; padding-top: var(--st, 0px); }
+.sgfullhead { display: flex; align-items: center; gap: 10px; padding: 10px calc(14px + var(--sr, 0px)) 10px calc(14px + var(--sl, 0px)); border-bottom: 1px solid #1d2c4a; font-family: var(--gur); font-size: 17px; }
+.sgfullhead span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sgfulllist { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(20px + var(--sb, 0px)); }
+.sgrow { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid #172642; background: transparent; color: #F3F1EC; padding: 12px calc(16px + var(--sr, 0px)) 12px calc(16px + var(--sl, 0px)); }
+.sgrow .g2 { font-family: var(--gur); font-size: 21px; line-height: 1.4; display: block; }
+.sgrow .t2 { font-size: 14px; color: #BFD0EA; display: block; font-style: italic; margin-top: 2px; }
+.sgrow .e2 { font-size: 14px; color: #F2D9A6; display: block; margin-top: 2px; }
+.sgrow.now { background: #172642; box-shadow: inset 4px 0 0 #F2A33A; }
+.sgrow.more { text-align: center; color: #8EA0BF; }
+.sgwhere { white-space: pre-line; position: absolute; left: 0; right: 0; bottom: calc(var(--u) * .025); text-align: center; color: #6F82A3; font-size: max(12px, calc(var(--u) * .03)); padding: 0 16px; pointer-events: none; }
 .sgctl { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 10px; padding: 10px calc(14px + var(--sr, 0px)) 10px calc(14px + var(--sl, 0px)); z-index: 2; transition: opacity .35s; }
 .sgtop { top: 0; background: linear-gradient(#0B1324, rgba(11, 19, 36, 0)); padding-top: calc(10px + var(--st, 0px)); padding-bottom: 28px; }
-.sgbottom { bottom: 0; justify-content: center; background: linear-gradient(rgba(11, 19, 36, 0), #0B1324); padding-top: 28px; padding-bottom: calc(var(--u) * .045 + 10px + var(--sb, 0px)); }
-.sgstage.idle .sgctl { opacity: 0; }
+.sgbottom { bottom: 0; flex-wrap: wrap; justify-content: center; row-gap: 8px; background: linear-gradient(rgba(11, 19, 36, 0), #0B1324); padding-top: 28px; padding-bottom: calc(var(--u) * .045 + 10px + var(--sb, 0px)); }
+.sgstage.idle .sgctl { opacity: 0; pointer-events: none; }
 .sgstage.nobottom .sgbottom { display: none; }
 .sgbtn { border: 1px solid #2A3C5E; background: rgba(23, 38, 66, .92); color: #F3F1EC; border-radius: 12px; min-height: 48px; min-width: 48px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 16px; }
 .sgbtn[aria-pressed="true"] { border-color: #F2A33A; color: #F2A33A; }
 .sgbtn:disabled { opacity: .45; }
-.sgpill { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 8px; color: #D7E0F0; font-size: 15px; font-weight: 600; }
+.sgpill { border: 0; background: transparent; font: inherit; flex: 1; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #D7E0F0; font-size: 15px; font-weight: 600; }
 .sgpill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
 .sgpill span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sgstate { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--u) * .035); text-align: center;
@@ -498,7 +520,7 @@ ol { list-style: none; margin: 0; padding: 0; }
 </div>
 <div class="sangat" id="sangat" hidden role="dialog" aria-label="Gurbani display">
  <div class="sgstage" id="sgStage" data-group="find">
-  <div class="body" id="sgBody"><p class="g" id="sgG"></p><p class="en" id="sgEn"></p><p class="nx" id="sgNx"></p></div>
+  <div class="body" id="sgBody"><p class="g" id="sgG"></p><p class="tr" id="sgTr"></p><p class="en" id="sgEn"></p><p class="nx" id="sgNx"></p></div>
   <div class="sgstate" id="sgState" hidden>
     <img src="logo.png" alt="" width="112" height="112">
     <p class="big" id="sgStateText" aria-live="polite"></p>
@@ -506,19 +528,37 @@ ol { list-style: none; margin: 0; padding: 0; }
     <p class="small" id="sgStateSmall"></p>
     <button type="button" class="sgbig" id="sgStart" hidden>Start listening</button>
   </div>
+  <div class="sgfaint" id="sgFaint"><span class="dot"></span><span id="sgFaintText"></span></div>
   <div class="sgctl sgtop">
     <button type="button" class="sgbtn" id="sgMore" aria-label="Advanced: search, history, messages, settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Advanced</button>
-    <div class="sgpill" id="sgPill" role="status"><span class="dot" aria-hidden="true"></span><span id="sgStatus"></span></div>
-    <button type="button" class="sgbtn" id="sgRotate" aria-label="Turn the display around"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button>
+    <button type="button" class="sgpill" id="sgPill"><span class="dot" aria-hidden="true"></span><span id="sgStatus"></span></button>
+    <button type="button" class="sgbtn" id="sgSmaller" aria-label="Smaller text">A&minus;</button>
+    <button type="button" class="sgbtn" id="sgBigger" aria-label="Larger text">A+</button>
   </div>
   <div class="sgctl sgbottom">
     <button type="button" class="sgbtn" id="sgPrev" aria-label="Previous line"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
     <button type="button" class="sgbtn" id="sgHold" aria-pressed="false"><span id="sgHoldText">Pause</span></button>
     <button type="button" class="sgbtn" id="sgNext" aria-label="Next line"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-    <button type="button" class="sgbtn" id="sgListen" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="sgListenText">Listen</span></button>
+    <span class="sgbreak"></span>
+    <button type="button" class="sgbtn" id="sgFullBtn">Full shabad</button>
+    <button type="button" class="sgbtn" id="sgRoman" aria-pressed="false">Roman</button>
+    <button type="button" class="sgbtn" id="sgSttm">SikhiToTheMax</button>
   </div>
-  <p class="sgbanner" id="sgBanner" role="alert" hidden></p>
   <div class="sgwhere" id="sgWhere"></div>
+  <p class="sghint" id="sgHint" hidden>Press and hold a line to copy or share it</p>
+  <p class="sgbanner" id="sgBanner" role="alert" hidden></p>
+  <div class="sgmask" id="sgCopy" hidden>
+    <div class="sgmenu" role="menu" aria-label="Copy or share">
+      <button type="button" role="menuitem" data-copy="tuk">Gurbani Tuk</button>
+      <button type="button" role="menuitem" data-copy="en">Gurbani and English</button>
+      <button type="button" role="menuitem" data-copy="all">Whole Shabad</button>
+      <button type="button" role="menuitem" data-copy="pic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7h14v-7"/></svg>Share as a picture</button>
+    </div>
+  </div>
+  <div class="sgfull" id="sgFull" hidden role="dialog" aria-label="Full shabad">
+    <div class="sgfullhead"><span id="sgFullTitle"></span><button type="button" class="sgbtn" id="sgFullClose">Close</button></div>
+    <div class="sgfulllist" id="sgFullList"></div>
+  </div>
   <div class="sgtoast" id="sgToast" hidden></div>
  </div>
 </div>
@@ -1116,11 +1156,16 @@ async function autoListen() {
 }
 function stopTry() { LOCAL.stopFile(); LOGO.file = 0; $("tryCard").hidden = true; render(); }
 let wake = null;
-function renderSangatBody() {
-  const st = S.state, m = S.msg;
-  const track = st && st.track_id ? S.tracks[st.track_id] : null;
+function sgCurrent() {
+  const st = S.state, track = st && st.track_id ? S.tracks[st.track_id] : null;
   const pos = st ? (st.pos !== null && st.pos !== undefined ? st.pos : st.last_pos) : null;
-  const body = $("sgBody");
+  if (!track || pos === null || pos === undefined) return { track: null };
+  const Ls = track.lines, line = Ls[pos] || {};
+  const np = st.next_pos !== undefined && st.next_pos !== null ? st.next_pos : (pos + 1 < Ls.length ? pos + 1 : null);
+  return { st, track, pos, Ls, line, np };
+}
+function renderSangatBody() {
+  const m = S.msg, body = $("sgBody"), c = sgCurrent();
   if (m && m.screens) {
     body.replaceChildren();
     if (m.kind === "image") { const im = document.createElement("img"); im.src = m.image; im.alt = ""; body.append(im); }
@@ -1128,22 +1173,25 @@ function renderSangatBody() {
     $("sgWhere").textContent = "";
     return;
   }
-  if (!$("sgG")) body.innerHTML = '<p class="g" id="sgG"></p><p class="en" id="sgEn"></p><p class="nx" id="sgNx"></p>';
-  if (!track || pos === null || pos === undefined) { $("sgG").textContent = "ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥"; $("sgEn").textContent = ""; $("sgNx").textContent = ""; $("sgWhere").textContent = ""; return; }
-  const Ls = track.lines, line = Ls[pos] || {};
-  const np = st.next_pos !== undefined && st.next_pos !== null ? st.next_pos : (pos + 1 < Ls.length ? pos + 1 : null);
+  if (!$("sgG")) body.innerHTML = '<p class="g" id="sgG"></p><p class="tr" id="sgTr"></p><p class="en" id="sgEn"></p><p class="nx" id="sgNx"></p>';
+  if (!c.track) { $("sgG").textContent = "ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥"; $("sgTr").textContent = ""; $("sgEn").textContent = ""; $("sgNx").textContent = ""; $("sgWhere").textContent = ""; return; }
+  const { track, pos, Ls, line, np } = c;
   $("sgG").textContent = line.g || "";
+  $("sgTr").textContent = PREF.tr ? (line.tr || "") : "";
   $("sgEn").textContent = S.settings.en === false ? "" : (line.en || "");
   $("sgNx").textContent = S.settings.next === false || np === null || !Ls[np] ? "" : Ls[np].g;
-  $("sgWhere").textContent = [line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.kind === "bani" ? track.subtitle : ""].filter(Boolean).join(" · ");
+  const where = track.kind === "bani" ? [line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.subtitle].filter(Boolean).join(" · ") : (track.subtitle || (line.ang ? `Ang ${line.ang}` : ""));
+  const title = track.kind === "shabad" && pos > 0 && track.title && track.title !== line.g ? track.title : "";    // the shabad's name, once the screen is past its first line
+  $("sgWhere").textContent = [title, where].filter(Boolean).join("\n");
 }
 /* ---------------- web: the full display (the home screen) ---------------- */
-const SG = { t: 0, mode: "" };
+const SG = { t: 0, mode: "", suppress: false };
 const UI = { mode: "simple" };           // simple: just the display; advanced: search, history, messages, settings. Remembered for next time.
 try { if (localStorage.getItem("gas-ui") === "advanced") UI.mode = "advanced"; } catch (e) { /* not kept */ }
 function uiMode(m) { UI.mode = m; try { localStorage.setItem("gas-ui", m); } catch (e) { /* not kept */ } }
-const ORI = { mode: "land" };            // land: landscape (turned if the phone is upright); landflip: landscape, the other way up; port: upright
-try { const o = JSON.parse(localStorage.getItem("gas-orient")); if (o && ["land", "landflip", "port"].includes(o.mode)) ORI.mode = o.mode; } catch (e) { /* not kept */ }
+const PREF = { tr: false, size: 100, hinted: false };       // Roman letters, text size (percent), the long-press hint shown once
+try { Object.assign(PREF, JSON.parse(localStorage.getItem("gas-prefs")) || {}); } catch (e) { /* not kept */ }
+function savePref() { try { localStorage.setItem("gas-prefs", JSON.stringify(PREF)); } catch (e) { /* not kept */ } }
 function renderSangat() {
   if ($("sangat").hidden) return;
   renderSangatBody();
@@ -1156,12 +1204,14 @@ function sgShow() {
   s.classList.remove("idle"); clearTimeout(SG.t);
   if (!sgPinned()) SG.t = setTimeout(() => { if (!sgPinned()) s.classList.add("idle"); }, 5000);
 }
+function sgHide() { clearTimeout(SG.t); if (!sgPinned()) $("sgStage").classList.add("idle"); }
 function sgSync() {
   const L = LOCAL, ready = L.ready.asr && L.ready.engine, m = S.msg, msgOn = !!(m && m.screens);
   const hearing = MIC.on || !!L.player;
   const mode = !ready ? (L.error ? "error" : "loading") : (!msgOn && !S.found ? (hearing ? "listening" : "idle") : "");
   const was = sgPinned(); SG.mode = mode;
   $("sgState").hidden = !mode; $("sgState").className = "sgstate " + mode; $("sgBody").hidden = !!mode;
+  $("sgWhere").hidden = !!mode;
   const pct = (who) => L.ready[who] ? 100 : (pctOf(L.progress[who]) ?? 0);
   $("sgBarBox").hidden = mode !== "loading";
   $("sgBar").style.width = Math.round((pct("asr") + pct("engine")) / 2) + "%";
@@ -1172,74 +1222,167 @@ function sgSync() {
   $("sgStateSmall").textContent = mode === "error" ? (L.error || "") : mode === "loading" && /Downloading/.test(L.progress.asr || "") ? "First time only: about 200 MB. Use Wi-Fi and keep the screen on." : "";
   $("sgStage").dataset.group = $("status").dataset.group || "find";
   $("sgStatus").textContent = $("statusText").textContent;
+  $("sgPill").setAttribute("aria-label", hearing ? "Listening. Tap to stop" : "Not listening. Tap to start");
   const held = $("hold").getAttribute("aria-pressed") === "true";
+  $("sgFaintText").textContent = !hearing ? "Not listening" : held ? "Paused" : S.found ? "Still listening" : "Listening";
   $("sgHold").setAttribute("aria-pressed", String(held)); $("sgHoldText").textContent = $("holdText").textContent;
-  $("sgHold").disabled = $("sgPrev").disabled = $("sgNext").disabled = !S.found;
-  $("sgListen").setAttribute("aria-pressed", String(MIC.on)); $("sgListenText").textContent = MIC.on ? "Listening" : "Listen";
-  $("sgListen").disabled = $("listen").disabled;
+  for (const id of ["sgHold", "sgPrev", "sgNext", "sgFullBtn", "sgSttm"]) $(id).disabled = !S.found;
+  $("sgRoman").setAttribute("aria-pressed", String(PREF.tr));
+  $("sgStage").style.setProperty("--sz", (PREF.size / 100).toFixed(2));
   if (sgPinned()) { $("sgStage").classList.remove("idle"); clearTimeout(SG.t); } else if (was) sgShow();
+  if (S.found && !PREF.hinted && !msgOn) { PREF.hinted = true; savePref(); $("sgHint").hidden = false; setTimeout(() => { $("sgHint").hidden = true; }, 6000); }
 }
 // the text is made as large as fits: smaller steps until the lines fit between top and bottom
 function sgFit() {
   const b = $("sgBody"), s = $("sgStage");
   if (b.hidden || $("sangat").hidden) return;
   s.style.setProperty("--fit", "1");
-  const cs = getComputedStyle(b), gap = parseFloat(cs.rowGap) || 0, kids = Array.from(b.children);
+  const cs = getComputedStyle(b), gap = parseFloat(cs.rowGap) || 0, kids = Array.from(b.children).filter(k => k.offsetHeight);
   const avail = b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
   let f = 1;
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 20; i++) {
     const need = kids.reduce((a, c) => a + c.offsetHeight, 0) + gap * Math.max(0, kids.length - 1);
     if (need <= avail) break;
     f *= 0.92; s.style.setProperty("--fit", f.toFixed(3));
   }
 }
-function sgRot() {                       // degrees to turn the display so it reads in the chosen way
-  const tall = innerHeight > innerWidth;
-  if (ORI.mode === "land") return tall ? 90 : 0;
-  if (ORI.mode === "landflip") return tall ? -90 : 0;
-  return tall ? 0 : 90;
-}
-function sgLayout() {
-  const s = $("sgStage"), W = innerWidth, H = innerHeight, r = sgRot();
-  const E = (side) => `env(safe-area-inset-${side}, 0px)`;
-  const sides = r === 0 ? { st: E("top"), sr: E("right"), sb: E("bottom"), sl: E("left") }
-    : r === 90 ? { st: E("right"), sr: E("bottom"), sb: E("left"), sl: E("top") }
-    : { st: E("left"), sr: E("top"), sb: E("right"), sl: E("bottom") };
-  const w = r ? H : W, h = r ? W : H;
-  s.style.width = w + "px"; s.style.height = h + "px";
-  s.style.left = r === 90 ? W + "px" : "0"; s.style.top = r === -90 ? H + "px" : "0";
-  s.style.transform = r ? `rotate(${r}deg)` : "none";
-  s.style.setProperty("--u", Math.min(w, h) + "px");
-  for (const k in sides) s.style.setProperty("--" + k, sides[k]);
+function sgLayout() {                    // follows the phone: upright or sideways, whichever it is held
+  const s = $("sgStage"), E = (side) => `env(safe-area-inset-${side}, 0px)`;
+  s.style.setProperty("--u", Math.min(innerWidth, innerHeight) + "px");
+  s.style.setProperty("--st", E("top")); s.style.setProperty("--sr", E("right")); s.style.setProperty("--sb", E("bottom")); s.style.setProperty("--sl", E("left"));
   sgFit();
 }
-function sgToast(text) { const t = $("sgToast"); t.textContent = text; t.hidden = false; clearTimeout(sgToast.t); sgToast.t = setTimeout(() => { t.hidden = true; }, 1400); }
-function sgRotate() {                    // the icon: landscape, landscape the other way up, upright - skipping any that look the same
-  const order = ["land", "landflip", "port"], before = sgRot();
-  let i = order.indexOf(ORI.mode);
-  for (let k = 0; k < 3; k++) { i = (i + 1) % 3; ORI.mode = order[i]; if (sgRot() !== before) break; }
-  try { localStorage.setItem("gas-orient", JSON.stringify({ mode: ORI.mode })); } catch (e) { /* not kept */ }
-  sgLayout();
-  sgToast(ORI.mode === "port" ? "Upright" : "Landscape");
-}
+function sgToast(text, ms) { const t = $("sgToast"); t.textContent = text; t.hidden = false; clearTimeout(sgToast.t); sgToast.t = setTimeout(() => { t.hidden = true; }, ms || 1600); }
 function openDisplay() {
   $("sangat").hidden = false; document.body.style.overflow = "";
   sgLayout(); renderSangat(); sgShow();
 }
-function closeDisplay() { $("sangat").hidden = true; clearTimeout(SG.t); }
+function closeDisplay() { $("sangat").hidden = true; clearTimeout(SG.t); $("sgCopy").hidden = true; $("sgFull").hidden = true; }
 addEventListener("resize", () => { if (!$("sangat").hidden) sgLayout(); });
 addEventListener("orientationchange", () => setTimeout(() => { if (!$("sangat").hidden) sgLayout(); }, 150));
-// A tap on buttons that are hidden (or fading) only brings them back; it never presses one. The state at the
-// start of the touch is what counts, so the answer does not change halfway through the tap.
-$("sangat").addEventListener("pointerdown", () => { SG.wasIdle = $("sgStage").classList.contains("idle"); }, { capture: true, passive: true });
-$("sangat").addEventListener("click", (e) => {
-  if (SG.wasIdle && e.target.closest && e.target.closest(".sgctl")) { e.stopPropagation(); e.preventDefault(); }
-  SG.wasIdle = false;
-}, true);
-["pointerdown", "keydown"].forEach(ev => $("sangat").addEventListener(ev, sgShow, { passive: true }));
-$("sangat").addEventListener("pointermove", (e) => {      // a mouse really moving (browsers also fire it when the page changes under a still mouse)
-  if (Math.abs(e.clientX - (SG.x || 0)) + Math.abs(e.clientY - (SG.y || 0)) > 6) { SG.x = e.clientX; SG.y = e.clientY; sgShow(); }
-}, { passive: true });
+
+/* tap: show the buttons; tap again: back to a clean screen. Buttons that are showing do their own job. */
+$("sgStage").addEventListener("click", (e) => {
+  if (SG.suppress) { SG.suppress = false; return; }                        // the end of a long press
+  if (e.target.closest(".sgctl, .sgmask, .sgfull, .sgbig, .sgstate.idle")) return;
+  $("sgStage").classList.contains("idle") ? sgShow() : sgHide();
+});
+$("sgStage").querySelectorAll(".sgctl").forEach(el => el.addEventListener("pointerdown", sgShow, { passive: true }));   // pressing a button keeps them up
+document.addEventListener("keydown", (e) => { if (!$("sangat").hidden && e.key !== "Escape") sgShow(); });
+
+/* long press on the Gurbani: copy or share */
+let lpTimer = 0, lpX = 0, lpY = 0;
+$("sgBody").addEventListener("pointerdown", (e) => {
+  if (!S.found || (S.msg && S.msg.screens)) return;
+  lpX = e.clientX; lpY = e.clientY; clearTimeout(lpTimer);
+  lpTimer = setTimeout(() => { lpTimer = 0; SG.suppress = true; $("sgCopy").hidden = false; if (navigator.vibrate) navigator.vibrate(10); }, 550);
+});
+["pointerup", "pointercancel", "pointerleave"].forEach(ev => $("sgBody").addEventListener(ev, () => { clearTimeout(lpTimer); lpTimer = 0; }));
+$("sgBody").addEventListener("pointermove", (e) => { if (lpTimer && Math.abs(e.clientX - lpX) + Math.abs(e.clientY - lpY) > 12) { clearTimeout(lpTimer); lpTimer = 0; } });
+$("sangat").addEventListener("contextmenu", (e) => e.preventDefault());
+$("sgCopy").addEventListener("click", (e) => { if (e.target === $("sgCopy")) $("sgCopy").hidden = true; });
+function copyPayload(kind) {
+  const c = sgCurrent(); if (!c.track) return "";
+  const { track, pos, Ls, line } = c, ang = line.ang ? `Ang ${line.ang}` : "";
+  if (kind === "tuk") return line.g || "";
+  if (kind === "en") return [line.g, line.en, ang].filter(Boolean).join("\n");
+  let part = Ls;                                   // the whole shabad (for a bani: the shabad the line belongs to)
+  if (track.kind !== "shabad" && line.sid !== undefined && line.sid !== null) part = Ls.filter(l => l.sid === line.sid);
+  if (part.length > 400) part = Ls.slice(Math.max(0, pos - 20), pos + 21);
+  return [track.kind === "shabad" ? track.title : (line.st || ""), ...part.map(l => [l.g, l.en].filter(Boolean).join("\n")), track.kind === "shabad" ? track.subtitle : [ang, track.subtitle].filter(Boolean).join(" · ")].filter(Boolean).join("\n\n");
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); }
+  catch (e) { const a = document.createElement("textarea"); a.value = t; a.style.cssText = "position:fixed;opacity:0"; document.body.append(a); a.select(); try { document.execCommand("copy"); } catch (e2) { /* nothing more to try */ } a.remove(); }
+  sgToast("Copied");
+}
+function wrapLines(ctx, text, maxW) {
+  const out = []; let cur = "";
+  for (const w of String(text || "").split(/\s+/).filter(Boolean)) {
+    const t = cur ? cur + " " + w : w;
+    if (cur && ctx.measureText(t).width > maxW) { out.push(cur); cur = w; } else cur = t;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+async function sharePicture() {
+  const c = sgCurrent(); if (!c.track) return;
+  const { track, line } = c, W = 1080, H = 1350, pad = 90;
+  try { await document.fonts.load('64px "Tiro Gurmukhi"', line.g || ""); } catch (e) { /* the system font is used */ }
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const x = cv.getContext("2d");
+  x.fillStyle = "#0B1324"; x.fillRect(0, 0, W, H);
+  x.textAlign = "center"; x.textBaseline = "alphabetic";
+  const blocks = [];
+  const gur = 'Tiro Gurmukhi, "Gurmukhi MN", "Noto Sans Gurmukhi", Raavi, serif', ui = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+  const mk = (text, font, size, color, lh) => { x.font = `${size}px ${font}`; const ls = wrapLines(x, text, W - 2 * pad); return { ls, font, size, color, lh, h: ls.length * size * lh }; };
+  blocks.push(mk(line.g, gur, 96, "#FFFFFF", 1.45));
+  if (PREF.tr && line.tr) blocks.push(mk(line.tr, ui, 40, "#BFD0EA", 1.4));
+  if (line.en) blocks.push(mk(line.en, ui, 44, "#F2D9A6", 1.4));
+  const total = blocks.reduce((a, b) => a + b.h + 44, -44);
+  let y = Math.max(190, (H - total) / 2);
+  for (const b of blocks) {
+    x.font = `${b.size}px ${b.font}`; x.fillStyle = b.color;
+    for (const l of b.ls) { y += b.size * b.lh; x.fillText(l, W / 2, y - b.size * 0.25); }
+    y += 44;
+  }
+  x.font = `32px ${ui}`; x.fillStyle = "#8EA0BF";
+  const foot = (track.kind === "shabad" ? track.subtitle : [line.ang ? `Ang ${line.ang}` : "", track.subtitle].filter(Boolean).join(" · ")) || "";
+  for (const [i, l] of wrapLines(x, foot, W - 2 * pad).entries()) x.fillText(l, W / 2, H - 150 + i * 42);
+  x.font = `26px ${ui}`; x.fillStyle = "#4F6288"; x.fillText("Gurbani Audio Searcher", W / 2, H - 56);
+  const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+  const file = new File([blob], "gurbani.png", { type: "image/png" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+  } catch (e) { if (e && e.name === "AbortError") return; }
+  const url = URL.createObjectURL(blob);                // no share sheet here: open the picture, to save it
+  window.open(url, "_blank");
+}
+$("sgCopy").querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
+  $("sgCopy").hidden = true;
+  if (b.dataset.copy === "pic") { sharePicture(); return; }
+  copyText(copyPayload(b.dataset.copy));
+});
+
+/* the whole shabad on screen: tap a line to go there */
+let fullFrom = 0, fullTo = 0;
+function renderFull() {
+  const c = sgCurrent(); if (!c.track) return;
+  const { track, pos, Ls } = c, list = $("sgFullList");
+  const kids = [];
+  const row = (i) => {
+    const l = Ls[i], b = document.createElement("button"); b.type = "button"; b.className = "sgrow" + (i === pos ? " now" : "");
+    const g = document.createElement("span"); g.className = "g2"; g.textContent = l.g || ""; b.append(g);
+    if (PREF.tr && l.tr) { const t = document.createElement("span"); t.className = "t2"; t.textContent = l.tr; b.append(t); }
+    if (S.settings.en !== false && l.en) { const e = document.createElement("span"); e.className = "e2"; e.textContent = l.en; b.append(e); }
+    b.onclick = () => { send({ cmd: "goto", pos: i }); $("sgFull").hidden = true; sgHide(); };
+    return b;
+  };
+  if (fullFrom > 0) { const m = document.createElement("button"); m.type = "button"; m.className = "sgrow more"; m.textContent = "Earlier lines"; m.onclick = () => { fullFrom = Math.max(0, fullFrom - 100); renderFull(); }; kids.push(m); }
+  for (let i = fullFrom; i < fullTo; i++) kids.push(row(i));
+  if (fullTo < Ls.length) { const m = document.createElement("button"); m.type = "button"; m.className = "sgrow more"; m.textContent = "Later lines"; m.onclick = () => { fullTo = Math.min(Ls.length, fullTo + 100); renderFull(); }; kids.push(m); }
+  list.replaceChildren(...kids);
+  $("sgFullTitle").textContent = track.title || track.subtitle || "";
+}
+function openFull() {
+  const c = sgCurrent(); if (!c.track) return;
+  fullFrom = Math.max(0, c.pos - 40); fullTo = Math.min(c.Ls.length, c.pos + 60);
+  if (c.Ls.length <= 160) { fullFrom = 0; fullTo = c.Ls.length; }       // a shabad: all of it; a long bani: the lines around here
+  $("sgFull").hidden = false; renderFull();
+  const now = $("sgFullList").querySelector(".now"); if (now) now.scrollIntoView({ block: "center" });
+}
+$("sgFullClose").onclick = () => { $("sgFull").hidden = true; };
+
+/* the buttons */
+$("sgSmaller").onclick = () => { PREF.size = Math.max(70, PREF.size - 10); savePref(); sgSync(); sgFit(); };
+$("sgBigger").onclick = () => { PREF.size = Math.min(170, PREF.size + 10); savePref(); sgSync(); sgFit(); };
+$("sgRoman").onclick = () => { PREF.tr = !PREF.tr; savePref(); renderSangat(); };
+$("sgFullBtn").onclick = openFull;
+$("sgSttm").onclick = () => {
+  const c = sgCurrent(); const sid = c.track && (c.line.sid || c.track.sid);
+  if (!sid) { sgToast("No SikhiToTheMax page for this one"); return; }
+  window.open(`https://www.sikhitothemax.org/shabad?id=${encodeURIComponent(sid)}`, "_blank", "noopener");
+};
 /* ---------------- web: the logo moves with the sound until the shabad is found ---------------- */
 const loud = (rms) => rms > 0 ? Math.max(0, Math.min(1, (20 * Math.log10(rms) + 54) / 44)) : 0;   // -54 dB .. -10 dB
 function logoActive() { return WEB && LOGO.on && !S.found && (MIC.on || !!LOCAL.player); }
@@ -1309,11 +1452,10 @@ if (WEB) {
   };
   $("sgMore").onclick = () => { uiMode("advanced"); closeDisplay(); tab("search"); };
   $("toDisplay").hidden = false; $("toDisplay").onclick = () => { uiMode("simple"); openDisplay(); };
-  $("sgRotate").onclick = sgRotate;
   $("sgPrev").onclick = () => $("back").click();
   $("sgNext").onclick = () => $("fwd").click();
   $("sgHold").onclick = () => $("hold").click();
-  $("sgListen").onclick = () => $("listen").click();
+  $("sgPill").onclick = () => $("listen").click();                 // the status: tap to stop or start listening
   $("sgStart").onclick = () => $("listen").click();
   $("sgState").addEventListener("click", () => { if (SG.mode === "idle") $("listen").click(); });    // anywhere on the screen
   if (UI.mode === "simple") openDisplay();       // Simple: only the Gurbani; Advanced (search, history, messages) opens as the classic screen
