@@ -273,7 +273,7 @@ ol { list-style: none; margin: 0; padding: 0; }
 .sgstate .big { font-size: calc(var(--u) * .062); font-weight: 600; color: #FFFFFF; }
 .sgstate .small { font-size: max(14px, calc(var(--u) * .036)); color: #9FB0CC; }
 .sgstate .bar { width: min(80%, 420px); }
-.sgbig { border: 0; border-radius: 999px; background: #F2A33A; color: #1B1203; font-weight: 700; font-size: calc(var(--u) * .06); min-height: 56px; padding: 0 calc(var(--u) * .09); }
+.sgbig { margin-top: calc(var(--u) * .02); border: 0; border-radius: 999px; background: #F2A33A; color: #1B1203; font-weight: 700; font-size: calc(var(--u) * .06); min-height: 56px; padding: 0 calc(var(--u) * .09); }
 @media (prefers-reduced-motion: no-preference) { .sgstate.listening img { animation: sgpulse 2.2s ease-in-out infinite; } }
 @keyframes sgpulse { 50% { transform: scale(1.12); } }
 .sgbanner { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--u) * .2); z-index: 3; margin: 0; max-width: 88%; background: #3A1D18; border: 1px solid #F08070; color: #FFD9D2; border-radius: 12px; padding: 10px 16px; font-size: 15px; text-align: center; }
@@ -290,7 +290,7 @@ ol { list-style: none; margin: 0; padding: 0; }
   <div class="row">
     <span class="logo-wrap" aria-hidden="true"><span class="ring" id="logoRing"></span><img class="logo" id="logoImg" src="logo64.png" alt="" width="30" height="30"></span>
     <div class="status" id="status" data-group="find" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="statusText">Connecting to the console</span><span class="sub" id="statusSub"></span></div>
-    <button type="button" class="iconbtn" id="toDisplay" aria-label="Full display" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button type="button" class="iconbtn" id="toDisplay" aria-label="Simple view: just the Gurbani" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button type="button" class="iconbtn" id="menuBtn" aria-label="More: screens, start over" aria-haspopup="dialog">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       <span class="on-dot" id="menuDot" hidden></span>
@@ -507,7 +507,7 @@ ol { list-style: none; margin: 0; padding: 0; }
     <button type="button" class="sgbig" id="sgStart" hidden>Start listening</button>
   </div>
   <div class="sgctl sgtop">
-    <button type="button" class="sgbtn" id="sgMore" aria-label="Search, history and settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>Search &amp; more</button>
+    <button type="button" class="sgbtn" id="sgMore" aria-label="Advanced: search, history, messages, settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Advanced</button>
     <div class="sgpill" id="sgPill" role="status"><span class="dot" aria-hidden="true"></span><span id="sgStatus"></span></div>
     <button type="button" class="sgbtn" id="sgRotate" aria-label="Turn the display around"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button>
   </div>
@@ -863,14 +863,14 @@ function renderResults(m) {
   if (!items.length) { const li = document.createElement("li"); li.className = "small"; li.style.padding = "10px 0"; li.textContent = "Nothing found. Try fewer letters, or another way of searching."; $("results").replaceChildren(li); return; }
   $("results").replaceChildren(...items.map(it => item(it.g, it.where, it.en, () => {
     send(it.kind === "bani" ? { cmd: "show", bani_id: it.bani_id, pos: it.pos } : { cmd: "show", sid: it.sid, pos: it.pos });
-    tab("now"); if (WEB) openDisplay();
+    tab("now");
   })));
 }
 function renderHistory(items) {
   $("histEmpty").hidden = items.length > 0;
   $("histList").replaceChildren(...items.map(it => item(it.title, it.where, "", () => {
     send(it.kind === "bani" ? { cmd: "show", bani_id: it.bani_id, key: it.key } : { cmd: "show", sid: it.sid, key: it.key });
-    tab("now"); if (WEB) openDisplay();
+    tab("now");
   }, it.time)));
 }
 
@@ -1098,7 +1098,21 @@ function renderStart() {
   $("startBox").hidden = ready && !L.error;
   $("listen").disabled = !ready;
   $("menuTry").disabled = !ready;
+  if (ready && !L.error) autoListen();
   renderSangat();
+}
+let autoTried = false;
+// Starts listening by itself the first time everything is ready. Safari only lets sound run after a tap,
+// so there the display shows "Tap to listen" instead (one tap, anywhere on the screen).
+async function autoListen() {
+  if (autoTried || MIC.on) return;
+  autoTried = true;
+  try {
+    const probe = new (window.AudioContext || window.webkitAudioContext)();
+    const ok = probe.state === "running"; probe.close && probe.close();
+    if (!ok) return;
+    await startPhoneMic();
+  } catch (e) { stopPhoneMic(false); /* refused: the Start button is there */ }
 }
 function stopTry() { LOCAL.stopFile(); LOGO.file = 0; $("tryCard").hidden = true; render(); }
 let wake = null;
@@ -1124,7 +1138,10 @@ function renderSangatBody() {
   $("sgWhere").textContent = [line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.kind === "bani" ? track.subtitle : ""].filter(Boolean).join(" · ");
 }
 /* ---------------- web: the full display (the home screen) ---------------- */
-const SG = { t: 0 };
+const SG = { t: 0, mode: "" };
+const UI = { mode: "simple" };           // simple: just the display; advanced: search, history, messages, settings. Remembered for next time.
+try { if (localStorage.getItem("gas-ui") === "advanced") UI.mode = "advanced"; } catch (e) { /* not kept */ }
+function uiMode(m) { UI.mode = m; try { localStorage.setItem("gas-ui", m); } catch (e) { /* not kept */ } }
 const ORI = { mode: "land" };            // land: landscape (turned if the phone is upright); landflip: landscape, the other way up; port: upright
 try { const o = JSON.parse(localStorage.getItem("gas-orient")); if (o && ["land", "landflip", "port"].includes(o.mode)) ORI.mode = o.mode; } catch (e) { /* not kept */ }
 function renderSangat() {
@@ -1133,7 +1150,7 @@ function renderSangat() {
   sgSync();
   sgFit();
 }
-function sgPinned() { return !$("sgState").hidden; }       // getting ready, or waiting to be started: the buttons stay
+function sgPinned() { return SG.mode === "error"; }        // an error keeps the buttons on screen; every other state lets them fade
 function sgShow() {
   const s = $("sgStage");
   s.classList.remove("idle"); clearTimeout(SG.t);
@@ -1143,17 +1160,16 @@ function sgSync() {
   const L = LOCAL, ready = L.ready.asr && L.ready.engine, m = S.msg, msgOn = !!(m && m.screens);
   const hearing = MIC.on || !!L.player;
   const mode = !ready ? (L.error ? "error" : "loading") : (!msgOn && !S.found ? (hearing ? "listening" : "idle") : "");
-  const was = sgPinned();
+  const was = sgPinned(); SG.mode = mode;
   $("sgState").hidden = !mode; $("sgState").className = "sgstate " + mode; $("sgBody").hidden = !!mode;
   const pct = (who) => L.ready[who] ? 100 : (pctOf(L.progress[who]) ?? 0);
   $("sgBarBox").hidden = mode !== "loading";
   $("sgBar").style.width = Math.round((pct("asr") + pct("engine")) / 2) + "%";
   $("sgStart").hidden = mode !== "idle";
   $("sgStage").classList.toggle("nobottom", mode === "loading" || mode === "error" || mode === "idle");
-  $("sgStateText").textContent = { loading: "Getting ready", error: "Something went wrong", idle: "Ready to listen", listening: "Listening…", "": "" }[mode];
-  $("sgStateSmall").textContent = { loading: "The first time this downloads about 200 MB, so use Wi-Fi and keep the screen on. After that it opens quickly.",
-    error: L.error || "", idle: "Tap Start, then put the phone near the speakers. The Gurbani appears here by itself.",
-    listening: "The Gurbani appears here as soon as the kirtan or paath is recognised.", "": "" }[mode];
+  $("sgStateText").textContent = { loading: "Getting ready", error: "Something went wrong", idle: "", listening: "Listening…", "": "" }[mode];
+  // as little as possible: a note only while the speech model is being downloaded for the first time
+  $("sgStateSmall").textContent = mode === "error" ? (L.error || "") : mode === "loading" && /Downloading/.test(L.progress.asr || "") ? "First time only: about 200 MB. Use Wi-Fi and keep the screen on." : "";
   $("sgStage").dataset.group = $("status").dataset.group || "find";
   $("sgStatus").textContent = $("statusText").textContent;
   const held = $("hold").getAttribute("aria-pressed") === "true";
@@ -1284,15 +1300,16 @@ if (WEB) {
     sheet("menu", false); openDisplay();
     try { if ("wakeLock" in navigator && !wake) wake = await navigator.wakeLock.request("screen"); } catch (e) { /* not offered */ }
   };
-  $("sgMore").onclick = () => { closeDisplay(); tab("search"); };
-  $("toDisplay").hidden = false; $("toDisplay").onclick = openDisplay;
+  $("sgMore").onclick = () => { uiMode("advanced"); closeDisplay(); tab("search"); };
+  $("toDisplay").hidden = false; $("toDisplay").onclick = () => { uiMode("simple"); openDisplay(); };
   $("sgRotate").onclick = sgRotate;
   $("sgPrev").onclick = () => $("back").click();
   $("sgNext").onclick = () => $("fwd").click();
   $("sgHold").onclick = () => $("hold").click();
   $("sgListen").onclick = () => $("listen").click();
   $("sgStart").onclick = () => $("listen").click();
-  openDisplay();                       // the full display is the first thing seen
+  $("sgState").addEventListener("click", () => { if (SG.mode === "idle") $("listen").click(); });    // anywhere on the screen
+  if (UI.mode === "simple") openDisplay();       // Simple: only the Gurbani; Advanced (search, history, messages) opens as the classic screen
   $("menuTv").onclick = () => { sheet("menu", false); sheet("tvSheet", true); };
   $("tvClose").onclick = () => sheet("tvSheet", false);
   $("menuSettings").onclick = () => { sheet("menu", false); applySettings(); sheet("setSheet", true); };

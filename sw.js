@@ -12,7 +12,19 @@ const FRESH = (u) => u.origin === self.location.origin && /(\/|index\.html|local
 // Pyodide / onnxruntime files from the CDN. The speech model (Hugging Face) is not touched here.
 const KEEP = (u) => (u.origin === self.location.origin) || u.hostname === "cdn.jsdelivr.net";
 
-self.addEventListener("install", () => self.skipWaiting());
+// Everything the engine needs, got on the first visit, so the page can start with no network at all.
+const PRELOAD = ["vendor/pyodide/pyodide.js", "vendor/pyodide/pyodide.asm.js", "vendor/pyodide/pyodide.asm.wasm", "vendor/pyodide/python_stdlib.zip",
+  "vendor/pyodide/pyodide-lock.json", "vendor/pyodide/numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
+  "vendor/ort118/ort.wasm.min.js", "vendor/ort118/ort-wasm-simd.wasm",
+  "app.zip?v=" + BUILD, "rf.wasm?v=" + BUILD, "rfjs.js?v=" + BUILD, "engine-core.js?v=" + BUILD, "vocab.json?v=" + BUILD,
+  "asr-worker.js?v=" + BUILD, "engine-worker.js?v=" + BUILD, "logo.png", "logo64.png"];
+self.addEventListener("install", (e) => {
+  self.skipWaiting();
+  e.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await Promise.all(PRELOAD.map(async (u) => { try { if (!(await cache.match(u))) await cache.add(u); } catch (err) { /* fetched when first needed instead */ } }));
+  })());
+});
 self.addEventListener("activate", (e) => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k.startsWith("gurbani-app-") && k !== CACHE) await caches.delete(k);
   await self.clients.claim();

@@ -10,8 +10,10 @@
   const BUILD = "2026-11-11a";             // (app/__init__.py) in every file name the page asks for: no old copies mixed in
   const CFG = {
     build: BUILD,
-    pyodide: P.has("local") ? here("vendor/pyodide/") : "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
-    ort: P.has("local") ? here("vendor/ort118/") : "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/",
+    // the Python runtime and onnxruntime are part of this site (vendor/, about 26 MB, pinned versions): no
+    // other server is needed for them, and the service worker keeps them on the phone. ?cdn uses the originals.
+    pyodide: P.has("cdn") ? "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/" : here("vendor/pyodide/"),
+    ort: P.has("cdn") ? "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/" : here("vendor/ort118/"),
     model: P.get("model") ? here(P.get("model"))
       : "https://huggingface.co/karansea/indicconformer-stt-pa-ctc-shabad-preview/resolve/5fd2e89e3a43d31f47b0fb55fdce5ed50a91283f/model.int8.onnx",   // the laptop app's v4.int8.onnx, pinned to one Hugging Face revision so it cannot change under the app
     vocab: here("vocab.json?v=" + BUILD),
