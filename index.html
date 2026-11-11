@@ -258,7 +258,7 @@ ol { list-style: none; margin: 0; padding: 0; }
 .sgctl { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 10px; padding: 10px calc(14px + var(--sr, 0px)) 10px calc(14px + var(--sl, 0px)); z-index: 2; transition: opacity .35s; }
 .sgtop { top: 0; background: linear-gradient(#0B1324, rgba(11, 19, 36, 0)); padding-top: calc(10px + var(--st, 0px)); padding-bottom: 28px; }
 .sgbottom { bottom: 0; justify-content: center; background: linear-gradient(rgba(11, 19, 36, 0), #0B1324); padding-top: 28px; padding-bottom: calc(var(--u) * .045 + 10px + var(--sb, 0px)); }
-.sgstage.idle .sgctl { opacity: 0; pointer-events: none; }
+.sgstage.idle .sgctl { opacity: 0; }
 .sgstage.nobottom .sgbottom { display: none; }
 .sgbtn { border: 1px solid #2A3C5E; background: rgba(23, 38, 66, .92); color: #F3F1EC; border-radius: 12px; min-height: 48px; min-width: 48px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 16px; }
 .sgbtn[aria-pressed="true"] { border-color: #F2A33A; color: #F2A33A; }
@@ -1229,6 +1229,13 @@ function openDisplay() {
 function closeDisplay() { $("sangat").hidden = true; clearTimeout(SG.t); }
 addEventListener("resize", () => { if (!$("sangat").hidden) sgLayout(); });
 addEventListener("orientationchange", () => setTimeout(() => { if (!$("sangat").hidden) sgLayout(); }, 150));
+// A tap on buttons that are hidden (or fading) only brings them back; it never presses one. The state at the
+// start of the touch is what counts, so the answer does not change halfway through the tap.
+$("sangat").addEventListener("pointerdown", () => { SG.wasIdle = $("sgStage").classList.contains("idle"); }, { capture: true, passive: true });
+$("sangat").addEventListener("click", (e) => {
+  if (SG.wasIdle && e.target.closest && e.target.closest(".sgctl")) { e.stopPropagation(); e.preventDefault(); }
+  SG.wasIdle = false;
+}, true);
 ["pointerdown", "keydown"].forEach(ev => $("sangat").addEventListener(ev, sgShow, { passive: true }));
 $("sangat").addEventListener("pointermove", (e) => {      // a mouse really moving (browsers also fire it when the page changes under a still mouse)
   if (Math.abs(e.clientX - (SG.x || 0)) + Math.abs(e.clientY - (SG.y || 0)) > 6) { SG.x = e.clientX; SG.y = e.clientY; sgShow(); }
