@@ -1180,9 +1180,7 @@ function renderSangatBody() {
   $("sgEn").textContent = S.settings.en === false ? "" : (line.en || "");
   $("sgNx").textContent = S.settings.next === false || np === null || !Ls[np] ? "" : Ls[np].g;
   const where = track.kind === "bani" ? [line.ang ? `Ang ${line.ang}` : (line.ref || ""), track.subtitle].filter(Boolean).join(" · ") : (track.subtitle || (line.ang ? `Ang ${line.ang}` : ""));
-  const plain = (t) => String(t || "").replace(/[॥੦-੯0-9\s]/g, "");        // the title is the first tuk without its ॥ and number
-  const title = track.kind === "shabad" && pos > 0 && track.title && plain(track.title) !== plain(line.g) ? track.title : "";    // the shabad's name, once the screen is past its first tuk
-  $("sgWhere").textContent = [title, where].filter(Boolean).join("\n");
+  $("sgWhere").textContent = where;                  // only where it is (Ang, raag, writer); the shabad's title is not shown
 }
 /* ---------------- web: the full display (the home screen) ---------------- */
 const SG = { t: 0, mode: "", suppress: false };
