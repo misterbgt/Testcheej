@@ -20,6 +20,37 @@ let busy = false, lastEnd = 0, hop = HOP_MIN, runs = 0, runMs = 0;
 const post = (m, t) => self.postMessage(m, t || []);
 const say = (text, extra) => post(Object.assign({ type: "progress", text }, extra || {}));
 
+const MODEL_BYTES = 184311219;                   // exact size of model.int8.onnx (the pinned revision in local.js)
+
+async function downloadModel(url, size) {
+  // Written straight into one preallocated array (a phone has little memory to spare: collecting
+  // pieces, joining them into a Blob and copying again would hold the model three times).
+  // Resumes after a dropped connection (up to 5 tries, continuing from the bytes already got).
+  const out = new Uint8Array(size); let got = 0, shown = -1, tries = 0;
+  while (got < size) {
+    try {
+      const r = await fetch(url, got ? { headers: { Range: `bytes=${got}-` } } : {});
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (got && r.status !== 206) { got = 0; throw new Error("resume not offered, starting again"); }
+      const reader = r.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (got + value.length > size) throw new Error("more data than expected");
+        out.set(value, got); got += value.length;
+        const pct = Math.min(99, Math.floor(100 * got / size));
+        if (pct !== shown) { shown = pct; say(`Downloading the speech model (first time only): ${pct}%`, { pct }); }
+      }
+      if (got < size) throw new Error("the connection closed early");
+    } catch (e) {
+      if (++tries > 5) throw new Error(`the speech model could not be downloaded (${e && e.message || e}). Check the Wi-Fi and reload to try again`);
+      say(`Download interrupted, continuing (try ${tries} of 5)`);
+      await new Promise(res => setTimeout(res, 1500 * tries));
+    }
+  }
+  return out;
+}
+
 async function getModel(url) {
   let cache = null;
   try {
@@ -27,30 +58,20 @@ async function getModel(url) {
     const hit = await cache.match(url);
     if (hit) {
       say("Loading the speech model (saved on this phone)");
-      return new Uint8Array(await hit.arrayBuffer());
+      const bytes = new Uint8Array(await hit.arrayBuffer());
+      if (bytes.length === MODEL_BYTES) return bytes;
+      await cache.delete(url);                   // a damaged or old copy: download it again
     }
   } catch (e) { cache = null; }
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`the speech model could not be downloaded (HTTP ${r.status})`);
-  const size = +r.headers.get("content-length") || 184311219;
-  const reader = r.body.getReader(), chunks = [];
-  let got = 0, shown = -1;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value); got += value.length;
-    const pct = Math.min(99, Math.floor(100 * got / size));
-    if (pct !== shown) { shown = pct; say(`Downloading the speech model (first time only): ${pct}%`, { pct }); }
-  }
-  let blob = new Blob(chunks); chunks.length = 0;
+  const bytes = await downloadModel(url, MODEL_BYTES);
   if (cache) {
-    try { await cache.put(url, new Response(blob, { headers: { "content-type": "application/octet-stream" } })); }
-    catch (e) { post({ type: "note", text: "The speech model could not be saved on this phone (not enough space?), so it will download again next time." }); }
+    try {
+      await cache.put(url, new Response(bytes, { headers: { "content-type": "application/octet-stream" } }));
+      post({ type: "saved" });
+    } catch (e) { post({ type: "note", text: "The speech model could not be saved on this phone (not enough space?), so it will download again next time." }); }
   }
-  const bytes = new Uint8Array(await blob.arrayBuffer()); blob = null;
   return bytes;
 }
-
 async function init(cfg) {
   importScripts(cfg.ort + "ort.wasm.min.js");
   ORT = self.ort;

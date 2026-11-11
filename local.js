@@ -13,7 +13,7 @@
     pyodide: P.has("local") ? here("vendor/pyodide/") : "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     ort: P.has("local") ? here("vendor/ort118/") : "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/",
     model: P.get("model") ? here(P.get("model"))
-      : "https://huggingface.co/karansea/indicconformer-stt-pa-ctc-shabad-preview/resolve/main/model.int8.onnx",   // the laptop app's v4.int8.onnx, by its Hugging Face name
+      : "https://huggingface.co/karansea/indicconformer-stt-pa-ctc-shabad-preview/resolve/5fd2e89e3a43d31f47b0fb55fdce5ed50a91283f/model.int8.onnx",   // the laptop app's v4.int8.onnx, pinned to one Hugging Face revision so it cannot change under the app
     vocab: here("vocab.json?v=" + BUILD),
     app: here("app.zip?v=" + BUILD),
   };
@@ -43,6 +43,7 @@
       if (L.ready.engine) engine.postMessage(m);
     } else if (m.type === "error") { fail(m.text); startEngine(); }
     else if (m.type === "note") { notice(m.text); }
+    else if (m.type === "saved") { askPersist(); addToHomeTip(); }
     else if (m.type === "stats") emit("stats", m);
   };
   engine.onmessage = (ev) => {
@@ -74,6 +75,39 @@
   }
   asr.postMessage({ type: "init", cfg: CFG });
 
+  // ---------------------------------------------------------------- iPhone / Safari care
+  // Safari drops a site's saved files after about a week unused, unless the page is on the Home
+  // Screen (or the browser grants persistent storage): ask, and tell the user how to keep the model.
+  const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  function askPersist() { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* not offered */ } }
+  function addToHomeTip() {
+    if (IOS && !navigator.standalone) notice("Tip: tap Share, then Add to Home Screen. Safari then keeps the speech model instead of clearing it after a week unused.");
+  }
+  // The screen locking suspends the page, and with it the download and the listening: keep the
+  // screen awake while the model loads and while sound is arriving, and take the lock again when
+  // the page comes back (Safari releases it whenever the page is hidden).
+  let wake = null, lastSound = 0;
+  const needAwake = () => !(L.ready.asr && L.ready.engine) || Date.now() - lastSound < 20000;
+  async function keepAwake() {
+    try {
+      if (document.visibilityState !== "visible" || wake || !needAwake() || !("wakeLock" in navigator)) return;
+      wake = await navigator.wakeLock.request("screen");
+      wake.addEventListener("release", () => { wake = null; });
+    } catch (e) { wake = null; /* not offered, or no permission yet */ }
+  }
+  // sound contexts the page makes: bring them back after a call, an alarm or switching apps
+  const Ctx = window.AudioContext || window.webkitAudioContext, ctxs = new Set();
+  if (Ctx) {
+    const Wrapped = function (...a) { const c = new Ctx(...a); ctxs.add(c); return c; };
+    Wrapped.prototype = Ctx.prototype;
+    window.AudioContext = Wrapped;
+    if (window.webkitAudioContext) window.webkitAudioContext = Wrapped;
+  }
+  function wakeSound() { for (const c of ctxs) if (c.state === "suspended" || c.state === "interrupted") c.resume().catch(() => {}); }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { keepAwake(); wakeSound(); } });
+  window.addEventListener("pageshow", () => { keepAwake(); wakeSound(); });
+  keepAwake();
+  setInterval(() => { keepAwake(); if (!needAwake() && wake) { wake.release().catch(() => {}); wake = null; } }, 5000);
   // ---------------------------------------------------------------- the page's "websocket"
   function broadcast(msgs) {
     for (const c of L.clients) for (const x of msgs) c._deliver(x);
@@ -113,7 +147,7 @@
   L.secondsHeard = 0;
   L.audio = (buffer) => {               // Float32 samples at 16 kHz (an ArrayBuffer)
     const n = buffer.byteLength / 4;
-    L.secondsHeard += n / 16000;
+    L.secondsHeard += n / 16000; lastSound = Date.now();
     if (L.ready.asr) asr.postMessage({ type: "audio", buf: buffer }, [buffer]);
   };
   L.askStats = () => asr.postMessage({ type: "stats" });
