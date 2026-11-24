@@ -1,0 +1,1923 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gurbani Audio Searcher (beta testing)</title>
+<link rel="icon" href="/logo64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta+Mahee:wght@400;500;600;700&family=Tiro+Gurmukhi&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EDF1F7; --panel: #FFFFFF; --ink: #14213D; --muted: #56647F; --rule: #D3DBE8;
+  --kesri: #B8650A; --follow: #1E7F52; --hold: #3558B8; --lost: #B9422F;
+  --btn: #E3E9F3; --btn-ink: #14213D;
+  --gur: "Tiro Gurmukhi", "Noto Serif Gurmukhi", "Raavi", "Nirmala UI", serif;
+  --ui: "Mukta Mahee", "Segoe UI", system-ui, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1A30; --panel: #172642; --ink: #F3F1EC; --muted: #9FB0CC; --rule: #2A3C5E;
+    --kesri: #F2A33A; --follow: #58C48D; --hold: #8EABF5; --lost: #F08070;
+    --btn: #22365A; --btn-ink: #F3F1EC; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1A30; --panel: #172642; --ink: #F3F1EC; --muted: #9FB0CC; --rule: #2A3C5E;
+  --kesri: #F2A33A; --follow: #58C48D; --hold: #8EABF5; --lost: #F08070;
+  --btn: #22365A; --btn-ink: #F3F1EC; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--ui); }
+.gur { font-family: var(--gur); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--kesri); outline-offset: 2px; }
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+
+.bar { display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.brand { font-weight: 600; font-size: 15px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.brand img { width: 30px; height: 30px; flex: none; }
+.brand .name { display: flex; flex-direction: column; line-height: 1.2; }
+.brand .beta { font-weight: 500; font-size: 12px; color: var(--kesri); }
+.splash .beta { font-size: 16px; font-weight: 600; color: var(--kesri); margin-top: -6px; }
+/* loading screen: until the app has loaded (never on the sangat screen) */
+.splash { position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; justify-items: center; gap: 18px;
+          background: var(--bg); text-align: center; padding: 24px; transition: opacity .5s; }
+.splash.gone { opacity: 0; pointer-events: none; }
+.splash img { width: min(42vh, 300px); height: auto; }
+.splash .step { font-size: 18px; min-height: 1.5em; }
+.splash .bar { width: min(360px, 70vw); height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; padding: 0; border: 0; }
+.splash .bar i { display: block; height: 100%; width: 35%; background: var(--kesri); border-radius: 3px; animation: slide 1.4s ease-in-out infinite; }
+.splash .bar.known i { animation: none; transition: width .4s; }
+@keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(290%); } }
+.splash small { color: var(--muted); font-size: 13px; max-width: 46ch; }
+/* lock: covers this window only; the sangat screen, casting and listening carry on */
+.lockscreen { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--bg); padding: 24px; }
+.lockscreen.setlock { background: rgba(15, 26, 48, .55); }
+.lockscreen[hidden] { display: none; }
+.lockbox { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--rule); border-radius: 16px; padding: 28px;
+           display: grid; gap: 14px; justify-items: center; text-align: center; }
+.locklogo { width: 120px; height: auto; }
+.lockbox h2 { margin: 0; font-size: 22px; }
+.lockbox .note { margin: 0; }
+.lockbox form { display: grid; gap: 10px; width: 100%; }
+.lockbox input { font: 600 22px var(--ui); letter-spacing: .3em; text-align: center; padding: 10px 12px; border: 1px solid var(--rule);
+                 border-radius: 10px; background: var(--bg); color: var(--ink); width: 100%; }
+.lockrow { display: flex; gap: 10px; justify-content: center; }
+.lockerr { margin: 0; min-height: 1.4em; color: var(--lost); font-weight: 600; }
+.modes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.seg { display: inline-flex; background: var(--btn); border-radius: 10px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 6px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; min-height: 36px; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
+/* the option that goes with the mode: Asa Ki Vaar (kirtan), which bani (paath) */
+.optchip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+           border-radius: 10px; padding: 6px 12px; min-height: 40px; font-weight: 600; font-size: 15px; cursor: pointer; white-space: nowrap; }
+.optchip .tick { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--muted); display: inline-grid; place-items: center; flex: none; }
+.optchip[aria-pressed="true"] { border-color: var(--kesri); color: var(--kesri); }
+.optchip[aria-pressed="true"] .tick { background: var(--kesri); border-color: var(--kesri); }
+.optchip[aria-pressed="true"] .tick::after { content: ""; width: 8px; height: 4px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+select.optchip { font-weight: 500; max-width: 300px; padding: 6px 10px; }
+select { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 10px; max-width: 280px; }
+/* status, in the middle of the top bar: what it is doing, whose microphone, the sound */
+.status { flex: 1 1 240px; display: flex; justify-content: center; min-width: 0; }
+.status .pill { display: inline-flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--rule); border-radius: 999px;
+                padding: 5px 14px 5px 12px; min-width: 0; max-width: 100%; }
+.status .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--c, var(--kesri)); flex: none; }
+.status #statusText { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.status .sub::before { content: "· "; }
+.status .sub { color: var(--muted); font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 2 auto; }
+.status .sub:empty { display: none; }
+.lvlbars { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; flex: none; }
+.lvlbars i { width: 3px; border-radius: 1px; background: var(--rule); }
+.lvlbars i:nth-child(1) { height: 5px; } .lvlbars i:nth-child(2) { height: 8px; } .lvlbars i:nth-child(3) { height: 11px; }
+.lvlbars i:nth-child(4) { height: 14px; } .lvlbars i:nth-child(5) { height: 16px; }
+.lvlbars i.on { background: var(--follow); }
+.lvlbars.hot i.on { background: var(--lost); }
+.lvlbars[hidden] { display: none; }
+/* Screens, Settings and the lock, top right */
+.tools { display: flex; align-items: center; gap: 8px; }
+.tool { display: inline-flex; align-items: center; gap: 8px; border: 0; background: var(--btn); color: var(--btn-ink); border-radius: 10px;
+        padding: 7px 12px; min-height: 40px; font-weight: 600; cursor: pointer; position: relative; }
+.tool.icon { width: 42px; padding: 0; justify-content: center; }
+.menu > summary.tool { list-style: none; padding: 7px 12px; border-radius: 10px; background: var(--btn); font-weight: 600; }
+.menu > summary.tool.icon { padding: 0; }
+.menu[open] > summary.tool { box-shadow: 0 0 0 2px var(--kesri); }
+.badge { background: var(--follow); color: #fff; border-radius: 999px; font-size: 12px; padding: 0 8px; line-height: 20px; font-weight: 600; }
+.tool.icon .badge { position: absolute; top: -7px; right: -7px; padding: 0 6px; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; min-height: 0; }
+.stage { position: relative; display: flex; flex-direction: column; min-height: 0; padding: 28px 48px 24px 56px; overflow: hidden; }
+.stage::before { content: ""; position: absolute; left: 24px; top: 28px; bottom: 24px; width: 6px; border-radius: 3px; background: var(--c); transition: background .3s; }
+[data-group] { --c: var(--kesri); }
+[data-group="follow"] { --c: var(--follow); }
+[data-group="hold"] { --c: var(--hold); }
+[data-group="lost"] { --c: var(--lost); }
+.where { min-height: 56px; }
+.track-title { font-size: 20px; line-height: 1.5; }
+.track-sub { color: var(--muted); font-size: 15px; }
+.lines { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; min-height: 0; }
+.line { margin: 0; }
+.line.prev, .line.next { color: var(--muted); line-height: 1.6; }
+.line.prev { font-size: calc(clamp(18px, 2vw, 28px) * var(--fs-prev, 1)); }
+.line.next { font-size: calc(clamp(18px, 2vw, 28px) * var(--fs-next, 1)); }
+.line.cur { font-size: calc(clamp(30px, 4.4vw, 66px) * var(--fs-g, 1)); line-height: 1.45; text-wrap: balance; }
+.translit { margin: -6px 0 0; color: var(--muted); font-size: calc(clamp(15px, 1.4vw, 20px) * var(--fs-tr, 1)); }
+.stage.stale .line.cur, .stage.stale .translit { opacity: .45; }
+.arrive { animation: arrive .35s ease-out; }
+@keyframes arrive { from { opacity: .3; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.empty { flex: 1; display: flex; align-items: center; color: var(--muted); font-size: 20px; max-width: 42ch; }
+.pos { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 15px; flex-wrap: wrap; }
+.rail { flex: 1; min-width: 120px; height: 4px; background: var(--rule); border-radius: 2px; overflow: hidden; }
+.rail div { height: 100%; width: 0; background: var(--c); transition: width .4s; }
+
+.side { border-left: 1px solid var(--rule); background: var(--panel); overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.side h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+.suggest { border: 1px solid var(--kesri); border-radius: 12px; padding: 14px; }
+/* Asa Ki Vaar: where the Vaar has reached (for the sewadar only; the sangat screens show just the Gurbani) */
+.akv { border: 1px solid var(--kesri); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.akv h2 { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.akv h2 .gur { font-size: 17px; color: var(--ink); font-weight: 400; }
+.akv-strip { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+.akv-strip button { min-height: 28px; padding: 0; border-radius: 6px; border: 1px solid var(--rule); background: transparent; color: var(--ink);
+                    font: 400 14px/1 var(--gur); cursor: pointer; }
+.akv-strip button.done { color: var(--muted); background: var(--btn); }
+.akv-strip button[aria-current="true"] { background: var(--kesri); border-color: var(--kesri); color: #fff; }
+.akv-row { display: flex; align-items: center; gap: 8px; }
+.akv-parts { display: flex; gap: 4px; flex: 1; }
+.akv-parts span { flex: 1; text-align: center; padding: 3px 0; border-radius: 6px; border: 1px solid var(--rule); font: 400 15px/1.2 var(--gur); color: var(--muted); }
+.akv-parts span.on { border-color: var(--kesri); color: var(--ink); font-weight: 600; box-shadow: inset 0 -3px 0 var(--kesri); }
+.akv .note { margin: 0; }
+.akv-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.akv-btns:not(:has(button:not([hidden]))) { display: none; }
+.suggest p { margin: 0 0 10px; }
+.cands ol, .list ol { list-style: none; margin: 0; padding: 0; }
+.cands li { padding: 10px 0; border-top: 1px solid var(--rule); }
+.cands li:first-child { border-top: 0; }
+.cand-line { font-size: 19px; line-height: 1.55; }
+.cand-where { color: var(--muted); font-size: 13px; margin: 2px 0 8px; }
+.back { border: 1px solid var(--rule); border-radius: 12px; padding: 14px; }
+.search { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.search-row { display: flex; gap: 8px; min-width: 0; }
+.search-row input { flex: 1; min-width: 0; width: 100%; background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; padding: 9px 12px; font-size: 17px; }
+.search-row input:focus { border-color: var(--kesri); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--kesri) 35%, transparent); }
+#tab-search, #tab-history, #tab-lines { flex: 1 1 auto; min-height: 160px; overflow-y: auto; }
+#tab-search { display: grid; align-content: start; }
+.ptabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; background: var(--btn); border-radius: 10px; padding: 3px; flex: none; }
+.ptabs button { border: 0; background: transparent; border-radius: 8px; min-height: 36px; font-weight: 500; cursor: pointer; }
+.ptabs button[aria-selected="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
+.qchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.qchips { flex-wrap: nowrap !important; gap: 5px !important; }
+.qchips button { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 2px 9px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.qchips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+#qHint { margin: 0; font-size: 13px; }
+.qhelp summary { cursor: pointer; color: var(--kesri); font-size: 13px; font-weight: 600; width: max-content; }
+.qhelp p { margin: 6px 0 0; font-size: 13px; }
+.linkbtn { border: 0; background: transparent; color: var(--kesri); font-weight: 600; padding: 2px 0; cursor: pointer; text-align: left; justify-self: start; }
+.results { list-style: none; margin: 0; padding: 0; }
+.results li + li { border-top: 1px solid var(--rule); }
+.results button, .hist button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 9px 8px; border-radius: 8px; cursor: pointer; }
+.results button:hover, .results button:focus-visible, .hist button:hover { background: var(--btn); }
+.results .g, .hist .g { font-family: var(--gur); font-size: 18px; line-height: 1.5; display: block; }
+.results .w, .hist .w { color: var(--muted); font-size: 13px; display: block; }
+.results .e { color: var(--muted); font-size: 13px; display: block; line-height: 1.4; margin-top: 2px; }
+.hist { list-style: none; margin: 0; padding: 0; }
+.hist .t { font: 600 13px var(--ui); color: var(--kesri); margin-right: 6px; }
+body.searching .side .ctx { display: none !important; }      /* searching: the results get the room */
+.back p { margin: 0; }
+.phone-on { display: flex; gap: 12px; align-items: flex-start; }
+.phone-on > div { display: grid; gap: 6px; min-width: 0; }
+.phone-panel .qr { width: 132px; height: 132px; border-radius: 8px; overflow: hidden; background: #fff; padding: 4px; flex: none; }
+.phone-panel .qr svg { display: block; width: 100%; height: 100%; }
+.phone-panel .addr { font-size: 17px; font-weight: 600; word-break: break-all; margin: 0; user-select: all; }
+.phone-panel h3 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 6px; }
+.phone-panel p { margin: 0; }
+.phone-panel ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.phone-panel li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.phone-panel li span { font-size: 15px; }
+.phone-panel li small { display: block; color: var(--muted); font-size: 13px; }
+.heardrow { margin-top: 12px; display: flex; gap: 10px; align-items: baseline; font-size: 14px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 10px; min-width: 0; }
+.heardrow .lab { font-weight: 600; color: var(--ink); flex: none; }
+.heardrow #heard { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.list li button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-family: var(--gur); font-size: 17px; line-height: 1.55; color: var(--muted); }
+.list li button:hover { background: var(--btn); color: var(--ink); }
+.angnav { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin: 4px 0 8px; position: sticky; top: 0; background: var(--panel); padding: 4px 0; z-index: 1; }
+.angnav button { border: 1px solid var(--rule); background: var(--btn); border-radius: 10px; min-height: 40px; font-weight: 600; cursor: pointer; }
+.angnav button:disabled { opacity: .4; cursor: default; }
+.angjump { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.angjump input { width: 72px; min-height: 36px; border: 1px solid var(--rule); border-radius: 8px; padding: 0 8px; background: var(--panel); color: var(--ink); font: inherit; text-align: center; }
+#angHere { margin: 0 0 6px; }
+.list li button[aria-current="true"] { background: var(--btn); color: var(--ink); box-shadow: inset 4px 0 0 var(--c); }
+
+.controls { display: flex; gap: 16px; justify-content: space-between; align-items: center; padding: 14px 24px; border-top: 1px solid var(--rule); flex-wrap: wrap; background: var(--bg); }
+.group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.controls .actions { margin-left: auto; justify-content: flex-end; }
+.btn { border: 0; background: var(--btn); color: var(--btn-ink); border-radius: 12px; min-height: 52px; padding: 10px 18px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; }
+.btn:hover { filter: brightness(1.04); }
+.btn kbd { font: 500 12px var(--ui); color: var(--muted); border: 1px solid var(--rule); border-radius: 6px; padding: 1px 6px; }
+.btn.hold[aria-pressed="true"] { background: var(--hold); color: #fff; }
+.btn.hold[aria-pressed="true"] kbd, .btn.primary kbd { color: #fff; border-color: rgba(255,255,255,.5); }
+.btn.primary { background: var(--kesri); color: #fff; }
+.btn.small { min-height: 38px; padding: 6px 14px; border-radius: 10px; }
+.note { color: var(--muted); font-size: 14px; }
+input[type=range] { accent-color: var(--kesri); width: 220px; max-width: 100%; }
+.micgroup { color: var(--muted); gap: 10px !important; min-width: 0; flex-wrap: nowrap !important; }
+.micgroup select { max-width: 240px; font-size: 14px; padding: 4px 8px; }
+.micname { font-size: 14px; color: var(--ink); max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.miclab { font-size: 13px; }
+.meter { width: 120px; height: 8px; background: var(--rule); border-radius: 4px; overflow: hidden; flex: none; }
+.meter div { height: 100%; width: 0; background: var(--follow); transition: width .1s linear; }
+.meter.hot div { background: var(--lost); }
+.mic-hint { margin: 0; border: 1px solid var(--lost); border-radius: 12px; padding: 12px 14px; }
+.translation { margin: 4px 0 0; font-size: calc(clamp(17px, 1.7vw, 26px) * var(--fs-en, 1)); line-height: 1.45; max-width: 60ch; }
+.settings { position: relative; }
+.settings summary { list-style: none; cursor: pointer; padding: 6px 14px; border-radius: 10px; background: var(--btn); font-weight: 500; }
+.settings summary::-webkit-details-marker { display: none; }
+.settings[open] summary { box-shadow: 0 0 0 1px var(--rule); }
+.settings .panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; width: 300px; display: grid; gap: 8px; }
+.settings label { display: flex; gap: 10px; align-items: center; cursor: pointer; }
+.settings input { width: 18px; height: 18px; accent-color: var(--kesri); }
+.settings-panel { width: 400px !important; max-height: calc(100vh - 90px); overflow-y: auto; }
+.stabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; background: var(--btn); border-radius: 10px; padding: 3px; }
+.stabs button { border: 0; background: transparent; border-radius: 8px; min-height: 34px; font-size: 14px; font-weight: 500; cursor: pointer; padding: 0 4px; }
+.stabs button[aria-selected="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
+.spage { display: grid; gap: 8px; padding-top: 4px; }
+.settings-panel .version { margin: 4px 0 0; border-top: 1px solid var(--rule); padding-top: 8px; }
+.screens-panel { width: 390px !important; max-height: calc(100vh - 90px); overflow-y: auto; gap: 0 !important; padding: 4px 16px 14px !important; }
+.views { display: grid; gap: 8px; }
+.scr { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.scr:first-child { border-top: 0; }
+.scr h2 { font-size: 15px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.scr .state { font-size: 12px; font-weight: 600; color: var(--muted); }
+.scr .state.on { color: #fff; background: var(--follow); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.scr .note { margin: 0; }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.backlink { margin-top: 10px; }
+.settings label.pick { flex-direction: column; align-items: stretch; gap: 6px; border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 2px; }
+.settings label.pick select { max-width: none; }
+.sizes { display: grid; gap: 6px; }
+.size { display: grid; grid-template-columns: 1fr 36px 54px 36px; align-items: center; gap: 4px; }
+.size button { border: 0; background: var(--btn); border-radius: 8px; height: 34px; font-size: 18px; font-weight: 600; cursor: pointer; }
+.size button:disabled { opacity: .35; cursor: default; }
+.size output { text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+.size small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
+.castlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.castlist:empty { display: none; }
+.castlist li button { width: 100%; text-align: left; border: 0; background: var(--btn); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-weight: 500; }
+.castlist li button small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+/* Overlay menu (livestream) */
+.ov-panel { padding-bottom: 4px; }
+.ov-panel h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.ov-panel h3 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 6px 0 0; border-top: 1px solid var(--rule); padding-top: 10px; }
+.ov-panel .note { margin: 0; }
+.ov-addr { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; }
+.ov-addr small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.ov-addr code { font-size: 13px; background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; overflow-wrap: anywhere; user-select: all; }
+.ov-preview { position: relative; width: 100%; height: calc((390px - 32px) * 9 / 16); border-radius: 10px; overflow: hidden;
+  background: radial-gradient(ellipse at 30% 75%, #b07a3a 0%, transparent 55%), radial-gradient(ellipse at 75% 35%, #7a4d2a 0%, transparent 50%),
+              linear-gradient(160deg, #3b2a1c, #1d1712 60%, #2b2016); }
+.ov-preview::after { content: "Preview"; position: absolute; right: 8px; bottom: 6px; font-size: 11px; color: rgba(255,255,255,.7); }
+.ov-preview iframe { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; pointer-events: none; color-scheme: normal; background: transparent; }
+.ov-pos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ov-pos button { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); cursor: pointer; padding: 0; }
+.ov-pos button span { position: absolute; height: 18%; width: 55%; border-radius: 3px; background: var(--muted); opacity: .55; }
+.ov-pos button[data-pos^="top"] span { top: 12%; } .ov-pos button[data-pos^="bottom"] span { bottom: 12%; }
+.ov-pos button[data-pos$="left"] span { left: 8%; } .ov-pos button[data-pos$="right"] span { right: 8%; }
+.ov-pos button[data-pos$="middle"] span { left: 22.5%; }
+.ov-pos.bars { grid-template-columns: repeat(5, 1fr); }
+.ov-pos.bars button { padding-bottom: 14px; }
+.ov-pos.bars button em { position: absolute; left: 0; right: 0; bottom: -17px; font-style: normal; font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; }
+.ov-pos.bars { margin-bottom: 18px; }
+.ov-pos.bars button span { width: 100%; left: 0; height: 22%; border-radius: 0; }
+.ov-pos.bars button[data-pos="top-bar"] span { top: 8%; } .ov-pos.bars button[data-pos="bottom-bar"] span { bottom: 8%; }
+.ov-pos.bars button[data-pos="middle-bar"] span { top: 39%; bottom: auto; }
+.ov-pos.bars button[data-pos$="side"] span { top: 0; bottom: auto; height: 100%; width: 28%; }
+.ov-pos.bars button[data-pos="right-side"] span { left: auto; right: 0; }
+.ov-pos button[aria-pressed="true"] { border-color: var(--kesri); box-shadow: 0 0 0 2px var(--kesri); }
+.ov-pos button[aria-pressed="true"] span { background: var(--kesri); opacity: 1; }
+.ov-row { display: grid; grid-template-columns: 84px 1fr 64px; align-items: center; gap: 8px; }
+.ov-row output { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
+.ov-panel input[type=range] { width: 100%; height: auto; }
+.ov-themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ov-themes button { border: 1px solid var(--rule); border-radius: 10px; padding: 0; cursor: pointer; overflow: hidden; background: var(--bg); text-align: left; }
+.ov-themes button b { display: block; padding: 6px 8px; font: 400 17px/1.3 var(--gur); }
+.ov-themes button b i { display: block; font: 600 11px/1.2 var(--ui); font-style: normal; }
+.ov-themes button small { display: block; padding: 4px 8px; font-size: 11px; color: var(--muted); background: var(--panel); }
+.ov-themes button[aria-pressed="true"] { border-color: var(--kesri); box-shadow: 0 0 0 2px var(--kesri); }
+.ov-colors { display: flex; gap: 12px; flex-wrap: wrap; }
+.ov-colors label { font-size: 14px; gap: 6px !important; }
+.ov-panel input[type=color] { width: 40px; height: 30px; padding: 0 2px; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); cursor: pointer; }
+/* screen messages: ਵਾਹਿਗੁਰੂ, a message or a picture instead of the Gurbani */
+.settings.up .panel { top: auto; bottom: calc(100% + 8px); }
+.controls .settings > summary.btn { min-height: 52px; padding: 0 18px; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; background: var(--btn); line-height: 1.2; }
+.controls .settings > summary.btn .gur { line-height: 1; }
+.controls .settings.msg-active > summary.btn { background: var(--kesri); color: #fff; }
+.msg-panel { width: 340px !important; max-height: calc(100vh - 140px); overflow-y: auto; }
+.msg-panel h3 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 4px 0 0; }
+.msg-panel .vaheguru { width: 100%; justify-content: center; font: 400 30px/1.2 var(--gur); min-height: 64px; }
+.msg-form { display: flex; gap: 6px; }
+.msg-form input { flex: 1; width: auto !important; height: auto !important; min-width: 0; border: 1px solid var(--rule); border-radius: 10px; padding: 8px 10px; background: var(--bg); }
+.msg-recent { display: flex; flex-wrap: wrap; gap: 6px; }
+.msg-recent button { border: 0; background: var(--btn); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 14px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-pics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.msg-pics .pic { position: relative; }
+.msg-pics .pic > button:first-child { width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--rule); border-radius: 8px; padding: 0; overflow: hidden; cursor: pointer; background: var(--bg); }
+.msg-pics img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.msg-pics .forget { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); font-size: 13px; line-height: 22px; cursor: pointer; padding: 0; }
+.msg-on { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid var(--kesri); border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; }
+.msg-on[hidden] { display: none; }
+.msg-on span { flex: 1; font-weight: 600; }
+.msg-on img { height: 40px; border-radius: 6px; }
+.screen-msg { display: none; }
+body.display-view .screen-msg { position: absolute; inset: 5vh 5vw; display: flex; align-items: center; justify-content: center; text-align: center; }
+body.display-view .screen-msg[hidden] { display: none; }
+body.display-view .screen-msg p { margin: 0; color: #F3F1EC; font: 600 var(--smu, 12vh)/1.3 var(--ui); text-wrap: balance; max-width: 100%; }
+body.display-view .screen-msg p.gur { font-family: var(--gur); font-weight: 400; }
+body.display-view .screen-msg img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cast-now { border: 1px solid var(--kesri); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; margin: 0; }
+.kbd-toggle { flex: none; border: 1px solid var(--rule); background: var(--bg); border-radius: 10px; width: 44px; font-family: var(--gur); font-size: 20px; cursor: pointer; }
+.kbd-toggle[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.gkbd { display: grid; gap: 6px; border: 1px solid var(--rule); border-radius: 12px; padding: 8px; background: var(--bg); }
+.gkbd .keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.gkbd button { border: 0; background: var(--panel); box-shadow: inset 0 0 0 1px var(--rule); border-radius: 8px; height: 32px; font-family: var(--gur); font-size: 20px; cursor: pointer; padding: 0; }
+.gkbd button:hover { background: var(--btn); }
+.gkbd .row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 4px; }
+.gkbd .row button { font-family: var(--ui); font-size: 14px; font-weight: 500; }
+.gkbd small { color: var(--muted); font-size: 12px; }
+.letters-preview { font-family: var(--gur); font-size: 20px; letter-spacing: .12em; color: var(--ink); }
+.mic-owner { font-weight: 600; font-size: 14px; color: var(--kesri); max-width: 220px; line-height: 1.3; }
+body.display-view { background: #0F1A30; color: #F3F1EC; }
+body.display-view .bar, body.display-view .side, body.display-view .controls, body.display-view .where, body.display-view .pos,
+body.display-view .heardrow, body.display-view .msg-on { display: none !important; }
+body.display-view .app { grid-template-rows: minmax(0, 1fr); }
+body.display-view .main { grid-template-columns: 1fr; height: 100%; }
+body.display-view .stage { padding: 5vh 5vw; height: 100%; }
+body.display-view .stage::before { display: none; }
+/* every size is a share of one unit, --u, which fitDisplay() sets so the
+   lines fill whatever screen they are shown on (TV, projector, cast) */
+body.display-view .lines { --u: 64px; align-items: center; text-align: center; gap: calc(var(--u) * .28); overflow: visible; }
+body.display-view .line, body.display-view .translation, body.display-view .translit { text-wrap: balance; max-width: 100%; }
+body.display-view .line.cur { font-size: calc(var(--u) * var(--fs-g, 1)); line-height: 1.4; }
+body.display-view .line.prev, body.display-view .line.next { color: #9FB0CC; line-height: 1.45; }
+body.display-view .line.prev { font-size: calc(var(--u) * .46 * var(--fs-prev, 1)); }
+body.display-view .line.next { font-size: calc(var(--u) * .46 * var(--fs-next, 1)); }
+body.display-view .translation { font-size: calc(var(--u) * .48 * var(--fs-en, 1)); max-width: 42ch; color: #F2D9A6; line-height: 1.4; margin: 0; }
+body.display-view .translit { color: #9FB0CC; font-size: calc(var(--u) * .38 * var(--fs-tr, 1)); margin: 0; }
+body.display-view .empty { display: none !important; }
+/* the testing notice: faint, along the bottom of the sangat screen only */
+.test-notice { display: none; }
+/* its size is --nz (Settings, Display: Test notice size), its place body[data-np] */
+body.display-view { --nz: 1; --nh: calc(clamp(15px, 2.4vh, 32px) * var(--nz) * 1.3); }
+body.display-view .test-notice { display: block; position: absolute; left: 4vw; right: 4vw; bottom: 2.2vh; margin: 0;
+  text-align: center; font: 500 calc(clamp(15px, 2.4vh, 32px) * var(--nz))/1.3 var(--ui); color: rgba(243, 241, 236, .72); letter-spacing: .01em; }
+body.display-view .test-notice[hidden] { display: none; }
+body.display-view[data-np^="top"] .test-notice { top: 2.2vh; bottom: auto; }
+body.display-view[data-np$="left"] .test-notice { text-align: left; }
+body.display-view[data-np$="right"] .test-notice { text-align: right; }
+body.display-view.with-notice .stage { padding-bottom: calc(5vh + var(--nh) + 1.5vh); }
+body.display-view.with-notice[data-np^="top"] .stage { padding-top: calc(5vh + var(--nh) + 1.5vh); padding-bottom: 5vh; }
+body.display-view .stage.stale .line.cur { opacity: 1; }
+/* Day mode (Settings, Display): dark text on a light background, for bright halls */
+body.display-view.day { background: #FAF8F3; color: #14213D; }
+body.display-view.day .line.prev, body.display-view.day .line.next, body.display-view.day .translit { color: #56647F; }
+body.display-view.day .translation { color: #7A4A00; }
+body.display-view.day .screen-msg p { color: #14213D; }
+body.display-view.day .test-notice { color: rgba(20, 33, 61, .62); }
+/* Full screen text (Settings, Display): small margins, and fitDisplay() lets the lines
+   grow as far as the screen allows (100% in Text size is then the whole screen) */
+body.display-view.fill .stage { padding: 2vh 2.5vw; }
+body.display-view.fill.with-notice .stage { padding-bottom: calc(2vh + var(--nh) + 1.2vh); }
+body.display-view.fill.with-notice[data-np^="top"] .stage { padding-top: calc(2vh + var(--nh) + 1.2vh); padding-bottom: 2vh; }
+body.display-view.fill .screen-msg { inset: 2vh 2.5vw; }
+body.display-view.fill .translation { max-width: 100%; }
+body.display-view.fill .test-notice { bottom: 1vh; }
+body.display-view.fill[data-np^="top"] .test-notice { top: 1vh; bottom: auto; }
+/* Gurbani weight (Settings, Display): the Gurmukhi font has a single weight, so bold is
+   the browser's own bold plus a thin outline in the text colour */
+body[data-gw="bold"] .line, body[data-gw="bold"]  .screen-msg p.gur { font-weight: 700; -webkit-text-stroke: .014em currentColor; }
+body[data-gw="extra"] .line, body[data-gw="extra"]  .screen-msg p.gur { font-weight: 900; -webkit-text-stroke: .04em currentColor; }
+.toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; }
+.toast.show { opacity: 1; }
+[hidden] { display: none !important; }
+
+@media (max-width: 1260px) {
+  .brand .name { display: none; }                 /* (the version is in Settings too) */
+}
+@media (max-width: 1100px) {
+  .status .sub { display: none; }
+}
+@media (max-width: 860px) {
+  .app { height: auto; min-height: 100%; }
+  .main { grid-template-columns: 1fr; }
+  .stage { padding: 20px 20px 20px 36px; min-height: 60vh; }
+  .stage::before { left: 14px; }
+  .side { border-left: 0; border-top: 1px solid var(--rule); }
+  .status { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrive { animation: none; }
+  .stage::before, .rail div { transition: none; }
+  .splash .bar i { animation: none; width: 100%; opacity: .5; }
+}
+</style>
+</head>
+<body>
+<div class="splash" id="splash" role="status" aria-live="polite">
+  <img src="/logo.png" alt="Gurbani Audio Searcher">
+  <div class="beta">(beta testing)</div>
+  <div class="step" id="splashStep">Starting</div>
+  <div class="bar" id="splashBar"><i></i></div>
+  <small>Speech recognition by kirtan-captioning, Karanbir Singh. Gurbani from Shabad OS.</small>
+</div>
+<div class="lockscreen" id="lockScreen" hidden role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="lockbox">
+    <img src="/logo.png" alt="" class="locklogo">
+    <h2 id="lockTitle">Locked</h2>
+    <p class="note">The projector, casting and listening carry on.</p>
+    <form id="unlockForm" autocomplete="off">
+      <input id="unlockCode" type="password" inputmode="numeric" maxlength="8" placeholder="Code" aria-label="Code to unlock">
+      <button class="btn primary" type="submit" id="unlockBtn">Unlock</button>
+    </form>
+    <p class="lockerr" id="unlockErr" role="alert"></p>
+  </div>
+</div>
+<div class="lockscreen setlock" id="setLock" hidden role="dialog" aria-modal="true" aria-labelledby="setLockTitle">
+  <div class="lockbox">
+    <h2 id="setLockTitle">Set a code to lock this window</h2>
+    <p class="note">4 to 8 numbers, needed to unlock. The projector, casting and listening carry on while it is locked. The code is forgotten when the app closes.</p>
+    <form id="setLockForm" autocomplete="off">
+      <input id="newCode" type="password" inputmode="numeric" maxlength="8" placeholder="Code" aria-label="New code">
+      <input id="newCode2" type="password" inputmode="numeric" maxlength="8" placeholder="The same code again" aria-label="New code again">
+      <div class="lockrow"><button type="button" class="btn" id="setLockCancel">Cancel</button><button class="btn primary" type="submit">Lock</button></div>
+    </form>
+    <p class="lockerr" id="setLockErr" role="alert"></p>
+  </div>
+</div>
+<div class="app">
+  <header class="bar">
+    <div class="brand"><img src="/logo64.png" alt="" width="30" height="30"><span class="name">Gurbani Audio Searcher<span class="beta">beta testing · <span id="verName">__VERSION_NAME__</span></span></span></div>
+    <div class="modes">
+      <div class="seg" role="group" aria-label="What is happening">
+        <button type="button" data-mode="kirtan" aria-pressed="true">Kirtan</button>
+        <button type="button" data-mode="paath" aria-pressed="false" title="Paath of a bani (Japji Sahib, Rehras Sahib, Sukhmani Sahib ...): found by itself, or chosen">Paath</button>
+        <button type="button" data-mode="akhand" aria-pressed="false" title="Akhand Paath or Sehaj Paath: once the place is found, carry on through Sri Guru Granth Sahib Ji in order, shabad after shabad and Ang after Ang">Akhand Paath</button>
+      </div>
+      <button type="button" class="optchip" id="akvChip" aria-pressed="false" hidden title="Asa Ki Vaar kirtan: follow each chhant, its saloks and its pauri in order (it also starts by itself once two parts are heard in order)"><span class="tick" aria-hidden="true"></span>Asa Ki Vaar</button>
+      <select id="bani" class="optchip" aria-label="Bani to follow" hidden>
+        <option value="">Bani: found by itself</option>
+      </select>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite" data-group="find">
+      <span class="pill"><span class="dot" aria-hidden="true"></span><span id="statusText">Connecting</span><span class="sub" id="statusSub"></span><span class="lvlbars" id="lvlBars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></span>
+    </div>
+    <div class="tools" id="showGroup" hidden>
+      <details class="settings menu" id="screensPanel">
+        <summary class="tool" id="screensSummary" title="Show the Gurbani to the sangat: projector, TV, livestream">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          Screens<span class="badge" id="screensBadge" hidden>On</span>
+        </summary>
+        <div class="panel screens-panel">
+          <div id="screensMain" class="views">
+            <section class="scr">
+              <h2>Projector <span class="state" id="projState"></span></h2>
+              <p class="note">A clean full-screen page for the sangat, on the second screen if there is one.</p>
+              <div class="btnrow"><button type="button" class="btn small primary" id="projBtn">Open the projector screen</button><button type="button" class="btn small" id="projClose" hidden>Close it</button></div>
+            </section>
+            <section class="scr" id="castPanel">
+              <h2>TV (Chromecast)</h2>
+              <div class="cast-now" id="castNow" hidden>
+                <span id="castNowText"></span>
+                <button type="button" class="btn small" id="castStop">Stop casting</button>
+              </div>
+              <ul class="castlist" id="castList"></ul>
+              <p class="note" id="castNote">Looking for Chromecasts on this Wi-Fi…</p>
+              <button type="button" class="linkbtn" id="castOther">Other screens (the browser's own Cast)</button>
+            </section>
+            <section class="scr">
+              <h2>Livestream overlay <span class="state" id="ovState"></span></h2>
+              <p class="note">For OBS, vMix or Streamlabs: only the Gurbani shows, over the camera.</p>
+              <button type="button" class="btn small" id="ovOpen">Set up the overlay ›</button>
+            </section>
+          </div>
+          <div id="ovView" class="views ov-panel" hidden>
+            <button type="button" class="linkbtn backlink" id="ovBack">‹ Screens</button>
+            <h2>Overlay for a livestream</h2>
+            <p class="note">In OBS, vMix or Streamlabs add a <b>Browser</b> source with this address, size 1920 &times; 1080. Only the Gurbani shows; the rest is see-through, so the camera shows behind it.</p>
+            <div class="ov-addr"><small>OBS on this computer</small><code id="ovLocal"></code><button type="button" class="btn small" data-copy="ovLocal">Copy</button></div>
+            <div class="ov-addr"><small>OBS on another computer on this network</small><code id="ovLan"></code><button type="button" class="btn small" data-copy="ovLan">Copy</button><button type="button" class="btn small" id="ovRefresh" title="Look for the network again, if wifi was joined after the app started">Refresh</button></div>
+            <div class="ov-preview" id="ovPreview"></div>
+            <h3>Where it sits</h3>
+            <div class="ov-pos bars" id="ovBars" role="group" aria-label="Bar or side panel">
+              <button type="button" data-pos="top-bar" title="Bar across the top" aria-label="Bar across the top"><span></span><em>Top bar</em></button>
+              <button type="button" data-pos="middle-bar" title="Bar across the middle" aria-label="Bar across the middle"><span></span><em>Centre bar</em></button>
+              <button type="button" data-pos="bottom-bar" title="Bar across the bottom" aria-label="Bar across the bottom"><span></span><em>Bottom bar</em></button>
+              <button type="button" data-pos="left-side" title="Panel down the left side" aria-label="Panel down the left side"><span></span><em>Left side</em></button>
+              <button type="button" data-pos="right-side" title="Panel down the right side" aria-label="Panel down the right side"><span></span><em>Right side</em></button>
+            </div>
+            <p class="note">Or a smaller box in a corner:</p>
+            <div class="ov-pos" id="ovPos" role="group" aria-label="Box position">
+              <button type="button" data-pos="top-left" title="Top left" aria-label="Top left"><span></span></button>
+              <button type="button" data-pos="top-middle" title="Top middle" aria-label="Top middle"><span></span></button>
+              <button type="button" data-pos="top-right" title="Top right" aria-label="Top right"><span></span></button>
+              <button type="button" data-pos="bottom-left" title="Bottom left" aria-label="Bottom left"><span></span></button>
+              <button type="button" data-pos="bottom-middle" title="Bottom middle" aria-label="Bottom middle"><span></span></button>
+              <button type="button" data-pos="bottom-right" title="Bottom right" aria-label="Bottom right"><span></span></button>
+            </div>
+            <div class="ov-row"><span>Width<small>(box, side)</small></span><input type="range" min="30" max="100" step="5" id="ovWidth" aria-label="Width of a box or side panel"><output id="ovWidthOut"></output></div>
+            <h3>Bar colour</h3>
+            <div class="ov-themes" id="ovThemes"></div>
+            <div class="ov-colors">
+              <label>Gurbani <input type="color" data-ovc="ov_gc" aria-label="Gurbani colour"></label>
+              <label>English <input type="color" data-ovc="ov_tc" aria-label="English colour"></label>
+              <label>Background <input type="color" data-ovc="ov_bg" aria-label="Background colour"></label>
+            </div>
+            <div class="ov-row"><span>Bar opacity</span><input type="range" min="0" max="100" step="5" id="ovOp" aria-label="Background opacity"><output id="ovOpOut"></output></div>
+            <h3>Text</h3>
+            <label><input type="checkbox" data-set="ov_en"> English translation</label>
+            <label><input type="checkbox" data-set="ov_tr"> Transliteration</label>
+            <div class="size" data-size="ov_gs"><span>Gurbani size</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <div class="size" data-size="ov_ts"><span>English size</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <p class="note">Gurbani text weight (normal, bold, extra bold) is set in Settings, Display, and applies here too.</p>
+            <h3>Test notice</h3>
+            <label><input type="checkbox" data-set="ov_notice"> Show the test notice in the bar</label>
+            <div class="size" data-size="ov_ns"><span>Notice size</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+          </div>
+        </div>
+      </details>
+      <details class="settings menu" id="settings">
+        <summary class="tool icon" id="settingsSummary" aria-label="Settings: display, text size, phones" title="Settings: display, text size, phones">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+          <span class="badge" id="phoneBadge" hidden></span>
+        </summary>
+        <div class="panel settings-panel">
+          <div class="stabs" role="tablist" aria-label="Settings">
+            <button type="button" role="tab" data-stab="display" aria-selected="true">Display</button>
+            <button type="button" role="tab" data-stab="sizes" aria-selected="false">Text size</button>
+            <button type="button" role="tab" data-stab="phones" aria-selected="false" id="phoneSummary">Phones</button>
+            <button type="button" role="tab" data-stab="learn" aria-selected="false">Learning</button>
+          </div>
+          <div class="spage" data-spage="display">
+            <label><input type="checkbox" data-set="en"> English translation</label>
+            <label><input type="checkbox" data-set="tr"> Transliteration</label>
+            <label><input type="checkbox" data-set="prev"> Previous line</label>
+            <label><input type="checkbox" data-set="next"> Next line</label>
+            <label><input type="checkbox" data-set="notice"> Show test notice</label>
+            <label class="pick">Test notice wording
+              <input type="text" id="noticeText" maxlength="200" aria-label="What the test notice says" placeholder="Vaheguru - This auto-Gurbani app is in testing - please forgive accuracy or glitches"></label>
+            <div class="size" data-size="notice_size"><span>Test notice size</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <label class="pick">Test notice place
+              <select data-choice="notice_pos" aria-label="Where the test notice sits on the sangat screen">
+                <option value="bottom-middle">Bottom, centre</option><option value="bottom-left">Bottom, left</option><option value="bottom-right">Bottom, right</option>
+                <option value="top-middle">Top, centre</option><option value="top-left">Top, left</option><option value="top-right">Top, right</option>
+              </select></label>
+            <label class="pick">Gurbani text weight
+              <select data-choice="g_weight" aria-label="Weight of the Gurbani text on the projector, cast and overlay">
+                <option value="normal">Normal</option><option value="bold">Bold</option><option value="extra">Extra bold</option>
+              </select></label>
+            <label><input type="checkbox" data-set="day"> Day mode: dark text on a light background</label>
+            <label><input type="checkbox" data-set="fill"> Full screen text: the lines fill the whole screen</label>
+            <label><input type="checkbox" data-set="predict"> Move ahead to the next line in paath</label>
+            <label class="pick">Rehras, Chaupai, Sohila, Aarti
+              <select data-choice="bani_length" aria-label="Length of Rehras, Chaupai, Sohila and Aarti">
+                <option value="short">Short (SGPC)</option><option value="medium">Medium</option>
+                <option value="long">Long (Taksal)</option><option value="extra long">Extra long (Buddha Dal)</option>
+              </select></label>
+            <p class="note">The length followed in Paath when one of these banis is found by itself, as SikhiToTheMax lists them. Any length can still be picked from the bani list.</p>
+          </div>
+          <div class="spage sizes" data-spage="sizes" hidden aria-label="Text size">
+            <div class="size" data-size="fs_g"><span>Gurbani line</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <div class="size" data-size="fs_prev"><span>Previous line</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <div class="size" data-size="fs_next"><span>Next line</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <div class="size" data-size="fs_en"><span>Translation</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <div class="size" data-size="fs_tr"><span>Transliteration</span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <div class="size" data-size="fs_all"><span>Sangat screen, all text<small>100% fills the screen</small></span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <div class="size" data-size="fs_msg"><span>ਵਾਹਿਗੁਰੂ and messages<small>100% is the biggest that fits</small></span><button type="button" data-d="-10" aria-label="Smaller">&minus;</button><output>100%</output><button type="button" data-d="10" aria-label="Bigger">+</button></div>
+            <button type="button" class="btn small" id="sizeReset">Reset text sizes</button>
+          </div>
+          <div class="spage phone-panel" data-spage="phones" hidden id="phonePanel">
+            <label><input type="checkbox" data-set="phone"> Let phones on this Wi-Fi control the console</label>
+            <div id="phoneOn" class="phone-on">
+              <div class="qr" id="phoneQr" aria-hidden="true"></div>
+              <div>
+                <p class="note">Scan with the phone camera, or type this into the phone's browser:</p>
+                <p class="addr" id="phoneAddr"></p>
+                <div class="upd" id="updBox">
+                  <h4>Updates</h4>
+                  <p id="updText" class="muted">Looking for updates…</p>
+                  <div class="row"><button type="button" class="btn small" id="updCheck">Check now</button><button type="button" class="btn small" id="updGo" hidden>Restart and install now</button></div>
+                  <label class="pick">Update web address or folder (leave blank to use the usual one)
+                    <input type="text" id="updDir" maxlength="260" aria-label="Folder the updates are put in" placeholder="Usual update folder"></label>
+                </div>
+                <button type="button" class="btn small" id="phoneRefresh" title="Look for the network again, if wifi was joined after the app started">Refresh address</button>
+                <p class="note" id="phoneOther"></p>
+              </div>
+            </div>
+            <div>
+              <h3>Connected</h3>
+              <ul id="phoneList"></ul>
+            </div>
+            <div id="blockedBox" hidden>
+              <h3>Disconnected until the console restarts</h3>
+              <ul id="blockedList"></ul>
+            </div>
+            <p class="note">The phone must be on the same Wi-Fi as this computer. If it can't open the address, allow Gurbani Audio Searcher through Windows Firewall (Windows asks the first time).</p>
+          </div>
+          <div class="spage" data-spage="learn" hidden>
+            <label><input type="checkbox" data-set="learn"> Learn from shabads picked by hand</label>
+            <label><input type="checkbox" data-set="autolisten"> Start listening when the app opens</label>
+            <p class="note">When a sewadar picks a shabad and it stays up, the console remembers how the singing sounded, so it finds that shabad sooner next time. Kept only on this computer.</p>
+            <button type="button" class="btn small" id="forgetLearnt">Forget what it has learnt</button>
+          </div>
+          <p class="note version" id="version"></p>
+        </div>
+      </details>
+      <button type="button" class="tool icon" id="lockBtn" aria-label="Lock" title="Lock this window with a code (the projector and listening carry on)"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="stage" id="stage" data-group="find" aria-label="Current Gurbani line">
+      <div class="where">
+        <div class="track-title gur" id="trackTitle"></div>
+        <div class="track-sub" id="trackSub"></div>
+      </div>
+      <div class="msg-on" id="msgOn" hidden><span id="msgOnText"></span><img id="msgOnImg" alt="" hidden><button type="button" class="btn small primary" id="msgOnBack">Back to Gurbani</button></div>
+      <div class="screen-msg" id="screenMsg" hidden><p id="smText"></p><img id="smImg" alt="" hidden></div>
+      <div class="lines" id="lines" hidden>
+        <p class="line prev gur" id="prevLine"></p>
+        <p class="line cur gur" id="curLine"></p>
+        <p class="translit" id="curTr"></p>
+        <p class="translation" id="curEn"></p>
+        <p class="line next gur" id="nextLine"></p>
+      </div>
+      <div class="empty" id="empty">Press Start listening. The Gurbani appears here as soon as the kirtan or paath is recognised.</div>
+      <p class="test-notice" id="testNotice">Vaheguru - This auto-Gurbani app is in testing - please forgive accuracy or glitches</p>
+      <div class="pos"><span id="posText"></span><span id="angText"></span><div class="rail"><div id="railFill"></div></div></div>
+      <div class="heardrow"><span class="lab">Heard</span><span class="gur" id="heard"></span></div>
+    </section>
+
+    <aside class="side">
+      <p class="mic-hint" id="micHint" role="alert" hidden></p>
+      <section class="cands ctx" id="candsBox" hidden>
+        <h2>Possible shabads</h2>
+        <ol id="cands"></ol>
+      </section>
+      <div class="suggest ctx" id="suggest" hidden>
+        <p id="suggestText"></p>
+        <button type="button" class="btn small primary" id="suggestBtn">Follow as paath</button>
+      </div>
+      <section class="back ctx" id="backBox" hidden>
+        <h2>Previous shabad</h2>
+        <p class="cand-line gur" id="backLine"></p>
+        <p class="cand-where" id="backWhere"></p>
+        <button type="button" class="btn small" id="backBtn">Back to previous <kbd>B</kbd></button>
+      </section>
+      <section class="akv ctx" id="akvBox" hidden aria-label="Asa Ki Vaar">
+        <h2><span>Asa Ki Vaar</span><span class="gur" id="akvWhere"></span></h2>
+        <div class="akv-strip" id="akvStrip" role="group" aria-label="Go to a pauri"></div>
+        <div class="akv-row">
+          <div class="akv-parts" aria-hidden="true"><span data-part="chhant">ਛੰਤ</span><span data-part="salok">ਸਲੋਕ</span><span data-part="pauri">ਪਉੜੀ</span></div>
+          <button type="button" class="btn small" id="akvNext">Next part <kbd>N</kbd></button>
+        </div>
+        <p class="note" id="akvNote" hidden></p>
+        <div class="akv-btns">
+          <button type="button" class="btn small primary" id="akvResume" hidden>Back to the Vaar</button>
+          <button type="button" class="linkbtn" id="akvEnd">End the Vaar</button>
+        </div>
+      </section>
+      <div class="ptabs" role="tablist" aria-label="Search, history and Bani">
+        <button type="button" role="tab" data-ptab="search" aria-selected="true" aria-controls="tab-search">Search</button>
+        <button type="button" role="tab" data-ptab="history" aria-selected="false" aria-controls="tab-history">History</button>
+        <button type="button" role="tab" data-ptab="lines" aria-selected="false" aria-controls="tab-lines">Bani</button>
+      </div>
+      <section class="search" id="tab-search" role="tabpanel" aria-label="Search Gurbani">
+        <div id="searchBox" class="search" hidden>
+          <div class="search-row">
+            <input type="search" id="q" placeholder="Search Gurbani" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="qHint">
+            <button type="button" class="kbd-toggle" id="kbdBtn" aria-pressed="false" title="Gurmukhi keyboard" aria-label="Gurmukhi keyboard">ੳ</button>
+          </div>
+          <div class="qchips" role="group" aria-label="Search by">
+            <button type="button" data-q="auto" aria-pressed="true">Gurmukhi</button>
+            <button type="button" data-q="letters" aria-pressed="false">First letters</button>
+            <button type="button" data-q="words" aria-pressed="false">Words</button>
+            <button type="button" data-q="latin" aria-pressed="false">English</button>
+          </div>
+          <select id="qMode" aria-label="Search by" hidden>
+            <option value="auto">Gurmukhi</option><option value="letters">First letters</option>
+            <option value="words">Words</option><option value="latin">English</option>
+          </select>
+          <div class="gkbd" id="gkbd" hidden></div>
+          <p class="note" id="qHint">English keys type Gurmukhi (mmrAe = ਮਮਰਅੲ). Press / to search.</p>
+          <details class="qhelp">
+            <summary>How searching works</summary>
+            <p class="note">Type first letters or words. English keys come out in Gurmukhi on the SikhiToTheMax layout (mmrAe = ਮਮਰਅੲ, mn mih = ਮਨ ਮਹਿ). Choose English for the translation, or words in English letters. Press / to search and Esc to close; ੳ opens a Gurmukhi keyboard. Pick a line to put it on the screen: listening carries on from there.</p>
+          </details>
+          <ol class="results" id="results"></ol>
+        </div>
+      </section>
+      <section id="tab-history" role="tabpanel" aria-label="History" hidden>
+        <p class="note" id="histEmpty">Shabads appear here once they have been on screen for a little while, or as soon as you pick one.</p>
+        <ol class="hist" id="histList"></ol>
+        <p class="note">Each day's list is also saved in the History folder inside the app's folder.</p>
+      </section>
+      <section class="list" id="tab-lines" role="tabpanel" aria-label="Bani" hidden>
+        <p class="note" id="listEmpty">The bani on screen, or the Ang it is on, appears here. Pick a line to move there.</p>
+        <div id="listBox" hidden>
+          <h2 id="listTitle">Bani</h2>
+          <div class="angnav" id="angNav" hidden>
+            <button type="button" id="angPrev" aria-label="Previous Ang">&lsaquo; Ang</button>
+            <label class="angjump">Ang <input type="number" id="angNum" min="1" max="1430" inputmode="numeric" aria-label="Go to Ang"></label>
+            <button type="button" id="angNext" aria-label="Next Ang">Ang &rsaquo;</button>
+          </div>
+          <button type="button" class="linkbtn" id="angHere" hidden>Back to the line on screen</button>
+          <ol id="lineList"></ol>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="controls">
+    <div class="group micgroup" id="liveSource" hidden aria-label="Microphone">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      <span class="mic-owner" id="micOwner" hidden></span>
+      <select id="micPick" aria-label="Microphone or sound desk input" hidden></select>
+      <span class="micname" id="micName">Microphone</span>
+      <span class="miclab">Sound</span>
+      <div class="meter" id="meter" title="Sound level"><div id="meterFill"></div></div>
+    </div>
+    <div class="group actions" aria-label="Controls">
+      <details class="settings up" id="msgPanel" hidden>
+        <summary class="btn" id="msgSummary"><span class="gur">ਵਾਹਿਗੁਰੂ</span>&nbsp;/ Message</summary>
+        <div class="panel msg-panel">
+          <p class="note" style="margin:0">Shows on the screens instead of the Gurbani. Listening carries on; "Back to Gurbani" returns to the current line.</p>
+          <button type="button" class="btn vaheguru" id="msgVaheguru">ਵਾਹਿਗੁਰੂ</button>
+          <h3>A message</h3>
+          <form class="msg-form" id="msgForm"><input type="text" id="msgText" maxlength="200" placeholder="e.g. Ardas will begin shortly" aria-label="Message"><button type="submit" class="btn small primary">Show</button></form>
+          <div class="msg-recent" id="msgRecent"></div>
+          <h3>A picture</h3>
+          <div class="msg-pics" id="msgPics"></div>
+          <button type="button" class="btn small" id="msgPick">Choose a picture&hellip;</button>
+          <input type="file" id="msgFile" accept="image/png,image/jpeg,image/gif" hidden>
+          <h3>Show on</h3>
+          <label><input type="checkbox" id="msgScreens" checked> Projector and TV</label>
+          <label><input type="checkbox" id="msgOverlay" checked> Livestream overlay</label>
+          <button type="button" class="btn small primary" id="msgClear" hidden>Back to Gurbani</button>
+        </div>
+      </details>
+      <button type="button" class="btn" id="resetBtn">Start over <kbd>R</kbd></button>
+      <button type="button" class="btn hold" id="holdBtn" aria-pressed="false">Pause auto changes <kbd>Space</kbd></button>
+      <button type="button" class="btn primary" id="micBtn" hidden>Start listening <kbd>M</kbd></button>
+    </div>
+    <div class="group" id="demoSource" hidden>
+      <select id="demoPick" aria-label="Recording to replay"></select>
+      <button type="button" class="btn small primary" id="demoPlay">Play</button>
+      <select id="demoSpeed" aria-label="Replay speed">
+        <option value="1">Real time</option><option value="5">5 times faster</option>
+        <option value="15" selected>15 times faster</option><option value="40">40 times faster</option>
+      </select>
+      <input type="range" id="demoScrub" min="0" max="100" step="1" value="0" aria-label="Position in recording">
+      <span class="note" id="demoTime">0:00</span>
+    </div>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script id="demo-data" type="application/json">null</script>
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const DEMO = JSON.parse($("demo-data").textContent || "null");
+const LIVE = location.protocol.startsWith("http") && !DEMO;
+const DISPLAY_VIEW = location.pathname.startsWith("/display");
+const VERSION = "__VERSION__";           // build stamp: pages reload when the app changes
+const VERSION_NAME = "__VERSION_NAME__";              // the version the sewadars see: a letter, then Gurmukhi numerals
+const SET = { en: true, tr: false, prev: false, next: true, predict: true, phone: true, learn: true, notice: true, day: false, fill: false,
+              fs_g: 100, fs_prev: 100, fs_next: 100, fs_en: 100, fs_tr: 100, fs_all: 100, fs_msg: 100,
+              ov_pos: "top-bar", ov_width: 80, ov_bg: "#0F1A30", ov_gc: "#FFFFFF", ov_tc: "#F2D9A6", ov_op: 85,
+              ov_gs: 100, ov_ts: 100, ov_en: true, ov_tr: false, ov_notice: false, ov_ns: 100,
+              notice_size: 100, notice_pos: "bottom-middle", notice_text: "", g_weight: "normal", bani_length: "long" };
+const SIZE_LIMITS = { fs_all: [40, 100], fs_msg: [30, 100] };
+const NOTICE_DEFAULT = "Vaheguru - This auto-Gurbani app is in testing - please forgive accuracy or glitches";
+function checkVersion(v) {             // a page left open from an older version reloads itself
+  if (!v || v === VERSION || !LIVE) return;
+  const u = new URL(location.href);
+  if (u.searchParams.get("v") === v) return;
+  u.searchParams.set("v", v); location.replace(u.toString());
+}
+let autoTried = false;
+function autoListen() {          // the app opens already listening (the laptop's microphone)
+  if (autoTried || !LIVE || DISPLAY_VIEW || SET.autolisten === false || /[?&]preview=/.test(location.search)) return;
+  autoTried = true;
+  setTimeout(async () => {
+    try {
+      if (micOn || phoneMic) return;
+      await startMic(); setMicLabel(); toast("Listening.");
+    } catch (e) { stopMic(); toast("Could not start listening by itself. Press Start listening."); }
+  }, 2500);
+}
+function applySettings() {
+  document.querySelectorAll("[data-set]").forEach(i => { i.checked = !!SET[i.dataset.set]; });
+  autoListen();
+  document.querySelectorAll("[data-choice]").forEach(i => { if (SET[i.dataset.choice]) i.value = SET[i.dataset.choice]; });
+  $("testNotice").hidden = !SET.notice;                       // sangat screen only (see the display-view styles)
+  $("testNotice").textContent = SET.notice_text || NOTICE_DEFAULT;
+  if (document.activeElement !== $("updDir")) $("updDir").value = SET.update_dir || "";
+  if (document.activeElement !== $("noticeText")) $("noticeText").value = SET.notice_text === NOTICE_DEFAULT ? "" : (SET.notice_text || "");
+  document.body.classList.toggle("with-notice", !!SET.notice);
+  document.body.classList.toggle("day", !!SET.day);            // sangat screen only (see the display-view styles)
+  document.body.classList.toggle("fill", !!SET.fill);
+  document.body.dataset.np = SET.notice_pos || "bottom-middle";
+  document.body.dataset.gw = SET.g_weight || "normal";
+  document.body.style.setProperty("--nz", String((SET.notice_size || 100) / 100));
+  const root = document.documentElement.style;
+  for (const k of ["fs_g", "fs_prev", "fs_next", "fs_en", "fs_tr"]) root.setProperty("--" + k.replace("_", "-"), String((SET[k] || 100) / 100));
+  document.querySelectorAll("[data-size]").forEach(row => {
+    const k = row.dataset.size, v = SET[k] || 100, [lo, hi] = SIZE_LIMITS[k] || [50, 200];
+    row.querySelector("output").textContent = v + "%";
+    row.querySelector('[data-d="-10"]').disabled = v <= lo;
+    row.querySelector('[data-d="10"]').disabled = v >= hi;
+  });
+  if (typeof applyOverlaySettings === "function") applyOverlaySettings();
+  S.lastCur = null; render();
+}
+const STATUS_GROUP = { following: "follow", held_simran: "hold", held_quiet: "hold", held_user: "hold",
+                       finding: "find", listening: "find", lost: "lost", searching_ahead: "hold" };
+const S = { ang: null, angShow: null, angLive: null, pickPending: false, manualTrack: null, tracks: {}, state: null, banis: [], lastCur: null, lastList: null, lastCands: null, localPos: null, localHold: false,
+            locked: false, hasCode: false, msg: null, recentImages: [], recentTexts: [] };
+
+/* ---------------- rendering ---------------- */
+function currentPos() {
+  const st = S.state;
+  if (!st) return null;
+  if (S.localPos !== null) return S.localPos;
+  return st.pos !== null && st.pos !== undefined ? st.pos : st.last_pos;
+}
+
+function render() {
+  const st = S.state;
+  const status = S.localHold ? "held_user" : (st ? st.status : "listening");
+  let text = S.localHold ? "Auto changes paused" : (st ? st.status_text : (S.loading ? "Starting" : (LIVE ? "Connecting" : "Ready")));
+  if (st && status === "listening" && LIVE && !DISPLAY_VIEW && !micListening()) text = "Not listening";
+  const group = STATUS_GROUP[status] || "find";
+  $("status").dataset.group = group;
+  $("stage").dataset.group = group;
+  $("statusText").textContent = text;
+  const held = status === "held_user";
+  $("holdBtn").setAttribute("aria-pressed", String(held));
+  $("holdBtn").firstChild.textContent = held ? "Resume auto changes " : "Pause auto changes ";
+
+  const mkey = modeKey(st);
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mkey)));
+  $("bani").hidden = mkey !== "paath" || !LIVE;                  // each mode shows its own option
+  const tk = st && st.track_id ? S.tracks[st.track_id] : null;
+  if (document.activeElement !== $("bani")) $("bani").value = mkey === "paath" && tk && tk.kind === "bani" ? String(tk.bani_id) : "";
+  $("akvChip").hidden = mkey !== "kirtan" || !LIVE;
+  $("akvChip").setAttribute("aria-pressed", String(!!(st && st.akv)));
+  renderMicStatus();
+
+  const track = st && st.track_id ? S.tracks[st.track_id] : null;
+  const pos = currentPos();
+  if (!track || pos === null || pos === undefined) {
+    $("lines").hidden = true; $("empty").hidden = false;
+    $("trackTitle").textContent = ""; $("trackSub").textContent = "";
+    $("posText").textContent = ""; $("angText").textContent = ""; $("railFill").style.width = "0";
+    $("listBox").hidden = true; $("listEmpty").hidden = false; S.lastList = null;
+  } else {
+    $("lines").hidden = false; $("empty").hidden = true;
+    const L = track.lines, line = L[pos] || {};
+    $("trackTitle").textContent = line.st || track.title || "";      // Akhand / Sehaj Paath: the line's own shabad
+    $("trackSub").textContent = line.sub || track.subtitle || "";
+    $("prevLine").textContent = SET.prev && pos > 0 ? L[pos - 1].g : "";
+    const np = st.next_pos !== undefined && st.next_pos !== null && S.localPos === null ? st.next_pos
+             : (pos + 1 < L.length ? pos + 1 : null);
+    $("nextLine").textContent = SET.next && np !== null && L[np] ? L[np].g : "";
+    $("prevLine").hidden = !SET.prev; $("nextLine").hidden = !SET.next;
+    // the same line keeps its key when the Akhand / Sehaj Paath window moves on (no flash)
+    const key = line.ln && line.sid ? `g${line.sid}:${line.li}` : track.id + ":" + pos;
+    if (S.lastCur !== key) {
+      const cur = $("curLine");
+      cur.textContent = line.g || "";
+      cur.classList.remove("arrive"); void cur.offsetWidth; cur.classList.add("arrive");
+      S.lastCur = key;
+    }
+    $("curTr").textContent = SET.tr ? line.tr || "" : "";
+    $("curTr").hidden = !SET.tr || !line.tr;
+    $("curEn").textContent = SET.en ? line.en || "" : "";
+    $("curEn").hidden = !SET.en || !line.en;
+    $("stage").classList.toggle("stale", st.pos === null && S.localPos === null);
+    const li = line.ln ? line.li : pos, ln = line.ln || L.length;   // Akhand / Sehaj Paath: within the shabad
+    $("posText").textContent = `Line ${li + 1} of ${ln}`;
+    $("angText").textContent = line.ang ? `Ang ${line.ang}` : (line.ref || "");
+    $("railFill").style.width = `${((li + 1) / ln) * 100}%`;
+    if (S.lastList !== key) { renderList(track, pos); S.lastList = key; }
+  }
+
+  const cands = st ? st.candidates || [] : [];
+  const showC = cands.length > 0 && (status === "finding" || status === "listening" || status === "lost");
+  $("candsBox").hidden = !showC;
+  const ckey = showC ? cands.map(c => c.sid).join(",") : "";
+  if (showC && ckey !== S.lastCands) {
+    $("cands").replaceChildren(...cands.map((c, i) => {
+      const li = document.createElement("li");
+      const g = document.createElement("div"); g.className = "cand-line gur"; g.textContent = c.first_line;
+      const w = document.createElement("div"); w.className = "cand-where"; w.textContent = c.where;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "btn small";
+      b.append("Show this ");
+      const k = document.createElement("kbd"); k.textContent = String(i + 1); b.append(k);
+      b.onclick = () => command({ cmd: "confirm", sid: c.sid });
+      li.append(g, w, b);
+      return li;
+    }));
+  }
+  S.lastCands = ckey;
+
+  const prevS = st && st.mode === "kirtan" ? st.previous : null;
+  $("backBox").hidden = !prevS;
+  if (prevS) { $("backLine").textContent = prevS.first_line; $("backWhere").textContent = prevS.where; }
+
+  const sug = st && st.mode === "kirtan" ? st.suggestion : null;
+  $("suggest").hidden = !sug;
+  if (sug && sug.bani_id === AKV_BANI) {
+    $("suggestText").textContent = "This is part of Asa Ki Vaar.";
+    $("suggestBtn").textContent = "Follow Asa Ki Vaar in order";
+  } else if (sug) {
+    $("suggestText").textContent = `This shabad is part of ${sug.name}.`;
+    $("suggestBtn").textContent = `Follow ${sug.name} as paath`;
+  }
+  renderAkv(st && st.mode === "kirtan" ? st.akv : null);
+  $("heard").textContent = st ? st.heard || "" : "";
+  $("testNotice").hidden = !SET.notice;
+  renderScreenMsg();
+  if (DISPLAY_VIEW) fitDisplay();
+}
+
+/* Kirtan, Paath (a bani) or Akhand Paath (Sri Guru Granth Sahib Ji in order) */
+function modeKey(st) { return !st || st.mode !== "paath" ? "kirtan" : st.sehaj ? "akhand" : "paath"; }
+function micListening() { try { return micOn || !!phoneMic; } catch (e) { return false; } }   // (before the microphone code has run)
+function renderMicStatus() {              // the status pill: whose microphone, and the sound
+  let on = false, phone = null;
+  try { on = micOn; phone = phoneMic; } catch (e) { /* the microphone code has not run yet */ }
+  const st = S.state, idle = !st || (st.status === "listening" && !on && !phone);
+  $("statusSub").textContent = !LIVE || DISPLAY_VIEW || idle ? "" : phone ? `${phone}'s microphone` : on ? "laptop microphone" : "microphone off";
+  $("lvlBars").hidden = !on;
+}
+
+/* ---------------- Asa Ki Vaar ---------------- */
+const AKV_BANI = 13;
+const GUR_DIGITS = "੦੧੨੩੪੫੬੭੮੯";
+const gurNum = (n) => String(n).replace(/[0-9]/g, d => GUR_DIGITS[+d]);
+function renderAkv(a) {
+  $("akvBox").hidden = !a;
+  if (!a) return;
+  const strip = $("akvStrip");
+  if (!strip.children.length) {
+    for (let n = 1; n <= 24; n++) {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = gurNum(n); b.dataset.n = n;
+      b.title = `Go to pauri ${n} (its chhant)`;
+      b.onclick = () => command({ cmd: "akv", action: "pauri", n });
+      strip.append(b);
+    }
+  }
+  const cur = a.paused ? null : a.pauri;
+  [...strip.children].forEach(b => {
+    const n = +b.dataset.n;
+    b.setAttribute("aria-current", String(n === cur));
+    b.classList.toggle("done", a.pauri !== null && (n < a.pauri || (a.paused && n === a.pauri)));
+  });
+  document.querySelectorAll(".akv-parts span").forEach(x => x.classList.toggle("on", !a.paused && x.dataset.part === a.part));
+  $("akvWhere").textContent = a.paused ? "" : `ਪਉੜੀ ${gurNum(a.pauri)}`;
+  $("akvNote").hidden = !a.paused;
+  if (a.paused) $("akvNote").textContent = a.next
+    ? `A shabad between pauris. The Vaar carries on by itself when chhant ${a.next} is sung.`
+    : "The Vaar is over.";
+  $("akvResume").hidden = !a.paused || !a.next;
+  $("akvNext").hidden = !!a.paused;
+}
+$("akvResume").onclick = () => command({ cmd: "akv", action: "resume" });
+$("akvNext").onclick = () => command({ cmd: "akv", action: "next" });
+$("akvEnd").onclick = () => command({ cmd: "akv", action: "end" });
+$("akvChip").onclick = () => command({ cmd: "akv", action: $("akvChip").getAttribute("aria-pressed") === "true" ? "end" : "start" });
+
+/* ---------------- ਵਾਹਿਗੁਰੂ, a message or a picture instead of the Gurbani ---------------- */
+function renderScreenMsg() {
+  const m = S.msg, onScreens = !!(m && m.screens), any = !!(m && (m.screens || m.overlay));
+  if (DISPLAY_VIEW) {
+    $("screenMsg").hidden = !onScreens;
+    if (!onScreens) return;
+    $("lines").hidden = true; $("empty").hidden = true;
+    const img = m.kind === "image";
+    $("smImg").hidden = !img; $("smText").hidden = img;
+    if (img) { if ($("smImg").getAttribute("src") !== m.image) $("smImg").src = m.image; return; }
+    $("smText").textContent = m.text;
+    $("smText").classList.toggle("gur", /[\u0A00-\u0A7F]/.test(m.text));
+    fitScreenMsg(m.kind === "vaheguru" ? 30 : 14);
+    return;
+  }
+  $("msgOn").hidden = !any;
+  $("msgPanel").classList.toggle("msg-active", any);
+  $("msgClear").hidden = !any;
+  const where = !m ? "" : m.screens && m.overlay ? "projector, TV and livestream" : m.screens ? "projector and TV" : "livestream";
+  const what = !m ? "" : m.kind === "image" ? "a picture" : m.kind === "vaheguru" ? "ਵਾਹਿਗੁਰੂ" : `"${m.text}"`;
+  $("msgOnText").textContent = any ? `Showing ${what} on the ${where}, instead of the Gurbani` : "";
+  $("msgOnImg").hidden = !(m && m.kind === "image");
+  if (m && m.kind === "image") $("msgOnImg").src = m.image;
+  $("msgSummary").lastChild.textContent = any ? "\u00a0/ Message: on" : "\u00a0/ Message";
+}
+function fitScreenMsg(most) {
+  const box = $("screenMsg"), p = $("smText");
+  let lo = 2, hi = most;                               // vh: ਵਾਹਿਗੁਰੂ large, a message a little smaller
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2;
+    box.style.setProperty("--smu", mid + "vh");
+    if (p.scrollHeight <= box.clientHeight && p.scrollWidth <= box.clientWidth) lo = mid; else hi = mid;
+  }
+  box.style.setProperty("--smu", (lo * (SET.fs_msg || 100) / 100) + "vh");
+}
+function renderMsgMenu() {
+  $("msgRecent").replaceChildren(...S.recentTexts.map(t => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.title = t;
+    if (/[\u0A00-\u0A7F]/.test(t)) b.classList.add("gur");
+    b.onclick = () => sendMsg({ kind: "text", text: t });
+    return b;
+  }));
+  $("msgPics").replaceChildren(...S.recentImages.map(n => {
+    const d = document.createElement("div"); d.className = "pic";
+    const b = document.createElement("button"); b.type = "button"; b.title = "Show this picture";
+    const im = document.createElement("img"); im.src = "/message-image/" + n; im.alt = ""; b.appendChild(im);
+    b.onclick = () => sendMsg({ kind: "image", image: n });
+    const x = document.createElement("button"); x.type = "button"; x.className = "forget"; x.textContent = "\u00d7";
+    x.title = "Remove from this list"; x.setAttribute("aria-label", "Remove this picture");
+    x.onclick = () => command({ cmd: "screen_msg", kind: "forget_image", image: n });
+    d.append(b, x); return d;
+  }));
+}
+function sendMsg(c) {
+  command(Object.assign({ cmd: "screen_msg", screens: $("msgScreens").checked, overlay: $("msgOverlay").checked }, c));
+}
+
+/* ---------------- sangat display: fill the screen ---------------- */
+function fitDisplay() {
+  const box = $("lines"), stage = $("stage");
+  if (box.hidden) return;
+  const cs = getComputedStyle(stage);
+  const availH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const availW = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  if (availH <= 0 || availW <= 0) return;
+  const kids = [...box.children].filter(k => !k.hidden && k.textContent);
+  const fits = () => {
+    let top = Infinity, bottom = -Infinity, wide = false;
+    for (const k of kids) {
+      top = Math.min(top, k.offsetTop); bottom = Math.max(bottom, k.offsetTop + k.offsetHeight);
+      if (k.scrollWidth > k.clientWidth + 1) wide = true;
+    }
+    return !wide && bottom - top <= availH;
+  };
+  let lo = 12, hi = SET.fill ? Math.max(24, Math.min(availW, availH))     // full screen text: as big as fits
+                            : Math.max(24, Math.min(availW * 0.09, availH * 0.16));
+  for (let i = 0; i < 14; i++) {
+    const mid = (lo + hi) / 2;
+    box.style.setProperty("--u", mid + "px");
+    if (fits()) lo = mid; else hi = mid;
+  }
+  box.style.setProperty("--u", Math.floor(lo * (SET.fs_all || 100) / 100) + "px");
+}
+
+function lineItem(text, current, onPick) {
+  const li = document.createElement("li"), b = document.createElement("button");
+  b.type = "button"; b.textContent = text;
+  if (current) b.setAttribute("aria-current", "true");
+  b.onclick = onPick; li.appendChild(b); return li;
+}
+/* The Bani tab: a bani shows all of its lines; a shabad picked by hand, or an Akhand / Sehaj
+   Paath, shows the Ang it is on, with Ang back and forward; a shabad found by listening
+   shows its own lines (and the Ang can be opened from the button above them). */
+function renderList(track, pos) {
+  const L = track.lines, line = L[pos] || {};
+  $("listBox").hidden = false; $("listEmpty").hidden = true;
+  const ang = Number(line.ang) || null;
+  if (S.pickPending) { S.manualTrack = track.id; S.pickPending = false; }     // a pick by hand: show its Ang
+  const asAng = ang && (track.kind === "granth" || (track.kind === "shabad" && (S.manualTrack === track.id || S.angOpen === track.id)));
+  if (asAng) {
+    $("listTitle").textContent = "Ang " + ang;
+    S.angLive = ang;
+    if (S.angShow === null || S.angFollow !== ang + ":" + track.id) { S.angShow = ang; S.angFollow = ang + ":" + track.id; }
+    requestAng(S.angShow);
+    renderAng(); return;
+  }
+  S.angLive = null; S.angShow = null; S.angFollow = null;
+  $("angNav").hidden = true; $("angHere").hidden = true;
+  const bani = track.kind === "bani";
+  $("listTitle").textContent = bani ? (track.subtitle || track.title || "Bani") : "Lines of this shabad";
+  $("lineList").replaceChildren(...L.map((l, i) => lineItem(l.g, i === pos, () => command({ cmd: "goto", pos: i }))));
+  if (!bani && ang) {                                  // found by listening: the Ang is one tap away
+    $("angHere").hidden = false; $("angHere").textContent = "Show the whole Ang " + ang;
+    $("angHere").onclick = () => { S.angOpen = track.id; S.lastList = null; render(); };
+  }
+  if (!$("tab-lines").hidden) showCurrentLine(false);
+}
+function requestAng(n) {
+  if (S.ang && S.ang.ang === n) return;
+  command({ cmd: "ang", n, id: "ang" });
+}
+function renderAng() {
+  const A = S.ang, n = S.angShow, track = S.state && S.state.track_id ? S.tracks[S.state.track_id] : null;
+  $("angNav").hidden = false;
+  $("angNum").value = n || ""; $("listTitle").textContent = "Ang " + n;
+  $("angPrev").disabled = !n || n <= 1; $("angNext").disabled = !n || (A && n >= A.last);
+  $("angHere").hidden = !(S.angLive && S.angLive !== n);
+  $("angHere").textContent = "Back to the line on screen (Ang " + S.angLive + ")";
+  $("angHere").onclick = () => { S.angShow = S.angLive; requestAng(S.angShow); renderAng(); };
+  if (!A || A.ang !== n) { $("lineList").replaceChildren(Object.assign(document.createElement("li"), { className: "note", textContent: "Loading\u2026" })); return; }
+  const cur = track && track.lines[currentPos()] ? track.lines[currentPos()].g : null;
+  $("lineList").replaceChildren(...A.lines.map(l => lineItem(l.g, l.g === cur && A.ang === S.angLive,
+    () => { S.pickPending = true; command({ cmd: "show", sid: l.sid, pos: l.pos }); })));
+  if (!$("tab-lines").hidden) showCurrentLine(true);
+}
+function goAng(n) {
+  n = Math.max(1, Math.min(S.ang ? S.ang.last : 1430, Math.round(Number(n) || 1)));
+  S.angShow = n; $("listTitle").textContent = "Ang " + n; requestAng(n); renderAng();
+}
+$("angPrev").onclick = () => goAng((S.angShow || 1) - 1);
+$("angNext").onclick = () => goAng((S.angShow || 1) + 1);
+$("angNum").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); goAng($("angNum").value); } e.stopPropagation(); });
+function showCurrentLine(centre) {        // within the Lines tab only (the cards above it stay put)
+  const box = $("tab-lines"), c = $("lineList").querySelector('[aria-current="true"]');
+  if (!c) return;
+  const top = c.offsetTop - box.offsetTop, bottom = top + c.offsetHeight;
+  if (centre || top < box.scrollTop || bottom > box.scrollTop + box.clientHeight) box.scrollTop = top - box.clientHeight / 3;
+}
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+function splashStep(text) {                       // "Downloading the speech model: 40%" fills the bar
+  const pc = /(\d+)\s*%/.exec(text || ""), bar = $("splashBar");
+  $("splashStep").textContent = (text || "Starting") + (pc ? "" : "\u2026");
+  bar.classList.toggle("known", !!pc);
+  if (pc) bar.firstElementChild.style.width = pc[1] + "%"; else bar.firstElementChild.style.width = "";
+}
+function splashDone() { const s = $("splash"); s.classList.add("gone"); setTimeout(() => { s.hidden = true; }, 600); }
+
+/* ---------------- lock ---------------- */
+function onLock(m) {
+  const was = S.locked;
+  S.locked = !!m.locked; S.hasCode = !!m.has_code;
+  $("lockScreen").hidden = !S.locked || DISPLAY_VIEW || !LIVE;
+  if (S.locked) {
+    $("setLock").hidden = true;
+    document.querySelectorAll("details.settings[open]").forEach((d) => { d.open = false; });
+    if (!was) { $("unlockCode").value = ""; $("unlockErr").textContent = ""; }
+    setTimeout(() => $("unlockCode").focus(), 50);
+  } else if (was) {
+    $("unlockErr").textContent = ""; $("unlockCode").value = "";
+  }
+  if (m.error) {
+    (S.locked ? $("unlockErr") : $("setLockErr")).textContent = m.error;
+    if (S.locked) $("unlockCode").value = "";
+  }
+  if (S.locked && m.wait) {                       // too many wrong codes: count down the wait
+    let left = m.wait; clearInterval(onLock.timer);
+    const tick = () => {
+      $("unlockErr").textContent = left > 0 ? `Too many wrong codes. Try again in ${left} seconds.` : "";
+      if (left-- <= 0) clearInterval(onLock.timer);
+    };
+    tick(); onLock.timer = setInterval(tick, 1000);
+  }
+}
+function openSetLock() {
+  $("setLockErr").textContent = ""; $("newCode").value = ""; $("newCode2").value = "";
+  $("setLock").hidden = false; setTimeout(() => $("newCode").focus(), 50);
+}
+$("lockBtn").onclick = () => { if (S.hasCode) command({ cmd: "lock" }); else openSetLock(); };
+$("setLockCancel").onclick = () => { $("setLock").hidden = true; };
+$("setLockForm").onsubmit = (e) => {
+  e.preventDefault();
+  const a = $("newCode").value.trim(), b = $("newCode2").value.trim();
+  if (!/^\d{4,8}$/.test(a)) { $("setLockErr").textContent = "The code must be 4 to 8 numbers."; return; }
+  if (a !== b) { $("setLockErr").textContent = "The two codes are different. Please type them again."; $("newCode2").value = ""; return; }
+  command({ cmd: "lock_set", code: a });
+  $("newCode").value = ""; $("newCode2").value = "";
+};
+$("unlockForm").onsubmit = (e) => { e.preventDefault(); command({ cmd: "unlock", code: $("unlockCode").value.trim() }); };
+// while locked (or setting a code), keys only reach the code boxes: no shortcuts
+window.addEventListener("keydown", (e) => {
+  const dialog = S.locked ? $("lockScreen") : (!$("setLock").hidden ? $("setLock") : null);
+  if (!dialog) return;
+  e.stopPropagation();
+  if (e.key === "Escape" && !S.locked) { $("setLock").hidden = true; return; }
+  if (!dialog.contains(e.target)) e.preventDefault();
+}, true);
+
+function receive(m) {
+  if (m.type === "loading") {
+    checkVersion(m.version);
+    S.loading = m.message;
+    splashStep(m.message);
+    $("statusText").textContent = "Starting"; $("empty").textContent = m.message + "\u2026";
+  } else if (m.type === "lock") {
+    onLock(m);
+  } else if (m.type === "screen_msg") {
+    S.msg = m.msg; S.recentImages = m.recent_images || []; S.recentTexts = m.recent_texts || [];
+    if (!DISPLAY_VIEW) renderMsgMenu();
+  } else if (m.type === "settings") {
+    Object.assign(SET, m.settings); applySettings();
+  } else if (m.type === "hello") {
+    checkVersion(m.version);
+    S.banis = m.banis || [];
+    S.loading = null;
+    splashDone();
+    if (!DISPLAY_VIEW) $("empty").textContent = "Press Start listening. The Gurbani appears here as soon as the kirtan or paath is recognised.";
+    const sel = $("bani");
+    sel.querySelectorAll("option[value]:not([value=''])").forEach(o => o.remove());
+    S.banis.forEach(b => { const o = document.createElement("option"); o.value = b.id; o.textContent = `${b.name}  ${b.name_gurmukhi}`; sel.appendChild(o); });
+  } else if (m.type === "listen") {                // a phone asked the laptop to stop or start listening
+    if (!DISPLAY_VIEW && LIVE) {
+      if (!m.on && micOn) { stopMic(); setMicLabel(); toast("Stopped listening (from a phone)."); }
+      else if (m.on && !micOn && !phoneMic) startMic().then(() => { setMicLabel(); toast("Listening (from a phone)."); })
+        .catch(() => toast("A phone asked the laptop to listen, but the microphone could not be opened."));
+    }
+  } else if (m.type === "update") {
+    renderUpdate(m);
+  } else if (m.type === "phones") {
+    renderPhones(m);
+  } else if (m.type === "screens") {
+    SCR.display = m.display || 0; SCR.overlay = m.overlay || 0; renderScreens();
+  } else if (m.type === "history") {
+    renderHistory(m.items || []);
+  } else if (m.type === "cast") {
+    if (!DISPLAY_VIEW) renderCast(m);
+  } else if (m.type === "mic") {
+    if (!DISPLAY_VIEW) micOwner(m);
+  } else if (m.type === "search_results") {
+    if (m.id === Q.id) renderResults(m);
+  } else if (m.type === "ang_view") {
+    if (m.id === "ang") { S.ang = m; if (S.angShow !== null && m.ang === S.angShow) renderAng(); }
+  } else if (m.type === "notice") {
+    if (!DISPLAY_VIEW) toast(m.message);
+  } else if (m.type === "track") {
+    S.tracks[m.track.id] = m.track;
+  } else if (m.type === "state") {
+    if (S.state && m.pos !== S.state.pos) S.localPos = null;
+    S.state = m;
+  }
+}
+
+/* ---------------- search and history ---------------- */
+const Q = { id: 0, timer: null, hint: document.getElementById("qHint").textContent };
+function runSearch() {
+  const q = $("q").value.trim();
+  if (q && $("tab-search").hidden) ptab("search");
+  document.body.classList.toggle("searching", q.length > 0 || !$("gkbd").hidden);
+  if (!q) { $("results").replaceChildren(); $("qHint").textContent = Q.hint; return; }
+  clearTimeout(Q.timer);
+  Q.timer = setTimeout(() => { Q.id += 1; command({ cmd: "search", q, mode: $("qMode").value, id: Q.id }); }, 220);
+}
+function resultButton(g, where, en, onPick) {
+  const b = document.createElement("button"); b.type = "button";
+  const a = document.createElement("span"); a.className = "g"; a.textContent = g;
+  const w = document.createElement("span"); w.className = "w"; w.textContent = where;
+  b.append(a, w);
+  if (en) { const e = document.createElement("span"); e.className = "e"; e.textContent = en.length > 110 ? en.slice(0, 108) + "\u2026" : en; b.append(e); }
+  b.onclick = onPick;
+  return b;
+}
+function renderResults(m) {
+  const items = m.items || [];
+  const hint = $("qHint");
+  if (m.mode === "letters") { hint.replaceChildren("First letters: ", Object.assign(document.createElement("span"), { className: "letters-preview", textContent: toLetters(m.q || $("q").value) })); }
+  else hint.textContent = m.mode === "english" ? "Searching the English translation." : "Searching words.";
+  if (!items.length) {
+    const li = document.createElement("li"); li.className = "note"; li.style.padding = "8px";
+    li.textContent = "Nothing found. Try fewer letters, or another way of searching.";
+    $("results").replaceChildren(li); return;
+  }
+  $("results").replaceChildren(...items.map(it => {
+    const li = document.createElement("li");
+    li.appendChild(resultButton(it.g, it.where, it.en, () => {
+      S.pickPending = true;
+      command(it.kind === "bani" ? { cmd: "show", bani_id: it.bani_id, pos: it.pos } : { cmd: "show", sid: it.sid, pos: it.pos });
+      toast("Showing the chosen line. Listening carries on from there.");
+    }));
+    return li;
+  }));
+}
+function renderHistory(items) {
+  $("histEmpty").hidden = items.length > 0;
+  $("histList").replaceChildren(...items.map(it => {
+    const li = document.createElement("li");
+    const b = resultButton(it.title, it.where, "", () => {
+      S.pickPending = true;
+      command(it.kind === "bani" ? { cmd: "show", bani_id: it.bani_id, key: it.key } : { cmd: "show", sid: it.sid, key: it.key });
+      toast("Back at the line it was on. Listening carries on from there.");
+    });
+    const t = document.createElement("span"); t.className = "t"; t.textContent = it.time;
+    b.querySelector(".w").prepend(t);
+    li.appendChild(b); return li;
+  }));
+}
+/* Gurmukhi letters for English keys (the SikhiToTheMax layout, plus the obvious sounds) */
+/* English keys type Gurmukhi Unicode, on the SikhiToTheMax (Gurbani Akhar) layout:
+   q = ਤ, t = ਟ, a = ੳ, A = ਅ, e = ੲ, w = ਾ, i = ਿ (typed before its letter, as in SikhiToTheMax),
+   I = ੀ, u = ੁ, U = ੂ, y = ੇ, Y = ੈ, o = ੋ, O = ੌ, M = ੰ, N = ਂ, ` = ੱ, R = ੍ਰ, H = ੍ਹ */
+const STTM = { a: "ੳ", A: "ਅ", e: "ੲ", E: "ਓ", s: "ਸ", S: "ਸ਼", h: "ਹ", k: "ਕ", K: "ਖ", g: "ਗ", G: "ਘ", "|": "ਙ",
+  c: "ਚ", C: "ਛ", j: "ਜ", J: "ਝ", "\\": "ਞ", t: "ਟ", T: "ਠ", f: "ਡ", F: "ਢ", x: "ਣ", q: "ਤ", Q: "ਥ", d: "ਦ", D: "ਧ",
+  n: "ਨ", p: "ਪ", P: "ਫ", b: "ਬ", B: "ਭ", m: "ਮ", X: "ਯ", r: "ਰ", l: "ਲ", v: "ਵ", V: "ੜ", L: "ਲ਼", z: "ਜ਼", Z: "ਗ਼",
+  "^": "ਖ਼", "&": "ਫ਼", w: "ਾ", i: "ਿ", I: "ੀ", u: "ੁ", U: "ੂ", y: "ੇ", Y: "ੈ", o: "ੋ", O: "ੌ", M: "ੰ", N: "ਂ",
+  W: "ਾਂ", "`": "ੱ", "~": "ੱ", R: "੍ਰ", H: "੍ਹ" };
+const LETTER_ONLY = { i: "ੲ", I: "ੲ", u: "ੳ", U: "ੳ", o: "ੳ", O: "ੳ", E: "ੳ" };   // first letters: vowel keys mean their letter
+const CONSONANT = new Set([..."ੲਸਹਕਖਗਘਙਚਛਜਝਞਟਠਡਢਣਤਥਦਧਨਪਫਬਭਮਯਰਲਵੜ\u0A36\u0A59\u0A5A\u0A5B\u0A5E\u0A33"]);
+const PRECOMPOSE = [["ਅਾ", "ਆ"], ["ੲਿ", "ਇ"], ["ੲੀ", "ਈ"], ["ੲੇ", "ਏ"], ["ਅੈ", "ਐ"], ["ੳੁ", "ਉ"], ["ੳੂ", "ਊ"], ["ਅੌ", "ਔ"], ["ੳੋ", "ਓ"]];
+const K = { pend: false, att: false };          // a sihari typed before its letter; one just placed after it
+function sttmType(before, text, letters) {
+  for (const ch of text) {
+    let m = letters ? (LETTER_ONLY[ch] || STTM[ch]) : STTM[ch];
+    if (m === undefined) { before += ch; K.pend = K.att = false; continue; }
+    if (letters && !CONSONANT.has(m) && !"ਅੳਓ".includes(m)) continue;          // no vowel signs among first letters
+    if (m === "ਿ") { before += m; K.pend = true; K.att = false; continue; }
+    if (K.pend && before.endsWith("ਿ") && CONSONANT.has(m)) { before = before.slice(0, -1) + m + "ਿ"; K.pend = false; K.att = true; continue; }
+    if (K.att && before.endsWith("ਿ") && (m === "੍ਰ" || m === "੍ਹ")) { before = before.slice(0, -1) + m + "ਿ"; continue; }
+    before += m; K.pend = K.att = false;
+  }
+  for (const [a, b] of PRECOMPOSE) before = before.split(a).join(b);
+  return before;
+}
+const LATIN = /[A-Za-z`~^&|\\]/;
+function gurmukhiTyping(input, letters, e) {   // on each input event, turn English keys into Gurmukhi where the caret is
+  const v = input.value;
+  if (!LATIN.test(v) || (e && e.isComposing)) return;
+  const end = input.selectionStart ?? v.length;
+  const data = e && e.inputType === "insertText" && e.data ? e.data : null;
+  if (data && end >= data.length && v.slice(end - data.length, end) === data) {
+    const before = sttmType(v.slice(0, end - data.length), data, letters);
+    input.value = before + v.slice(end);
+    input.setSelectionRange(before.length, before.length);
+  } else {                                     // pasted, autocompleted or switched mode: convert it all
+    K.pend = K.att = false;
+    const out = sttmType("", v, letters);
+    input.value = out; input.setSelectionRange(out.length, out.length);
+  }
+}
+const toLetters = (t) => { K.pend = K.att = false; return sttmType("", t, true); };
+function lettersInput(e) {               // Gurmukhi, First letters and Words: English keys type Gurmukhi
+  const mode = $("qMode").value;
+  if (mode === "latin") return;
+  gurmukhiTyping($("q"), mode === "letters", e);
+}
+const AKHAR = [..."ੳਅੲਸਹਕਖਗਘਙਚਛਜਝਞਟਠਡਢਣਤਥਦਧਨਪਫਬਭਮਯਰਲਵੜ"], PAIR = ["ਸ਼", "ਖ਼", "ਗ਼", "ਜ਼", "ਫ਼"];
+const VOWELS = [..."ਆਇਈਉਊਏਐਓਔ"], SIGNS = [..."ਾਿੀੁੂੇੈੋੌੰਂੱ੍"];
+function buildKeyboard() {
+  const k = $("gkbd"); if (k.childElementCount) return;
+  const key = (ch, label) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label || ch;
+    b.onmousedown = (e) => e.preventDefault(); b.onclick = () => typeKey(ch); return b; };
+  const grid = (list, sign) => { const g = document.createElement("div"); g.className = "keys"; list.forEach(ch => g.appendChild(key(ch, sign ? "\u25CC" + ch : ch))); return g; };
+  const note = (t, cls) => { const n = document.createElement("small"); n.textContent = t; if (cls) n.className = cls; return n; };
+  const vow = document.createElement("div"); vow.className = "vow"; vow.append(note("Vowels and vowel signs (for words)"), grid(VOWELS), grid(SIGNS, true));
+  const row = document.createElement("div"); row.className = "row";
+  [["Space", " "], ["\u232B", "back"], ["Clear", "clear"]].forEach(([l, v]) => { const b = key(v, l); row.appendChild(b); });
+  k.append(grid(AKHAR), grid(PAIR), vow, row);
+}
+function typeKey(ch) {
+  const q = $("q");
+  if (ch === "back") q.value = [...q.value].slice(0, -1).join("");
+  else if (ch === "clear") q.value = "";
+  else q.value += ch;
+  q.dispatchEvent(new Event("input"));
+}
+$("kbdBtn").onclick = () => {
+  const on = $("kbdBtn").getAttribute("aria-pressed") !== "true";
+  $("kbdBtn").setAttribute("aria-pressed", String(on)); buildKeyboard(); $("gkbd").hidden = !on;
+  document.body.classList.toggle("searching", on || $("q").value.trim().length > 0);
+  if (on) $("q").focus();
+};
+function updateKeyboardMode() { const v = $("gkbd").querySelector(".vow"); if (v) v.hidden = $("qMode").value === "letters"; }
+$("qMode").addEventListener("change", () => { lettersInput(); updateKeyboardMode(); });
+$("q").addEventListener("input", (e) => { lettersInput(e); runSearch(); });
+$("q").addEventListener("compositionend", () => { lettersInput(); runSearch(); });
+document.querySelectorAll("[data-q]").forEach(b => b.onclick = () => {
+  $("qMode").value = b.dataset.q;
+  document.querySelectorAll("[data-q]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  $("qMode").dispatchEvent(new Event("change"));
+  $("q").focus();
+});
+/* the side panel's tabs: Search, History, Lines (the last one chosen is kept) */
+function ptab(name) {
+  if (!["search", "history", "lines"].includes(name)) return;
+  document.querySelectorAll("[data-ptab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.ptab === name)));
+  $("tab-search").hidden = name !== "search"; $("tab-history").hidden = name !== "history"; $("tab-lines").hidden = name !== "lines";
+  try { localStorage.setItem("gas-ptab", name); } catch (e) { /* not kept */ }
+  if (name === "lines") showCurrentLine(true);
+}
+document.querySelectorAll("[data-ptab]").forEach(b => b.onclick = () => ptab(b.dataset.ptab));
+try { ptab(localStorage.getItem("gas-ptab") || "search"); } catch (e) { /* first time */ }
+document.querySelectorAll("[data-size]").forEach(row => row.querySelectorAll("button").forEach(b => b.onclick = () => {
+  const k = row.dataset.size, [lo, hi] = SIZE_LIMITS[k] || [50, 200];
+  const v = Math.max(lo, Math.min(hi, (SET[k] || 100) + Number(b.dataset.d)));
+  if (LIVE) command({ cmd: "settings", [k]: v }); else { SET[k] = v; applySettings(); }
+}));
+$("sizeReset").onclick = () => {
+  const all = { fs_g: 100, fs_prev: 100, fs_next: 100, fs_en: 100, fs_tr: 100, fs_all: 100, fs_msg: 100 };
+  if (LIVE) command(Object.assign({ cmd: "settings" }, all)); else { Object.assign(SET, all); applySettings(); }
+};
+$("qMode").addEventListener("change", runSearch);
+$("q").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { $("q").value = ""; $("gkbd").hidden = true; $("kbdBtn").setAttribute("aria-pressed", "false"); runSearch(); $("q").blur(); }
+  else if (e.key === "Enter") { const b = $("results").querySelector("button"); if (b) b.click(); }
+  else if (e.key === "ArrowDown") { const b = $("results").querySelector("button"); if (b) { e.preventDefault(); b.focus(); } }
+});
+$("results").addEventListener("keydown", (e) => {
+  const list = [...$("results").querySelectorAll("button")], i = list.indexOf(document.activeElement);
+  if (e.key === "ArrowDown" && i >= 0 && i + 1 < list.length) { e.preventDefault(); list[i + 1].focus(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); (i > 0 ? list[i - 1] : $("q")).focus(); }
+  else if (e.key === "Escape") { $("q").value = ""; runSearch(); }
+});
+
+function renderPhones(m) {
+  $("phoneOn").hidden = !m.on;
+  const url = (m.urls || [])[0];
+  $("phoneQr").innerHTML = m.on && m.qr ? m.qr : "";
+  $("phoneQr").hidden = !(m.on && m.qr);
+  $("phoneAddr").textContent = url || "This computer isn't connected to a network.";
+  $("ovLan").textContent = url ? url.replace(/\/phone$/, "/overlay") : "This computer isn't connected to a network.";
+  $("phoneOther").textContent = (m.urls || []).length > 1 ? `If that doesn't open, try ${m.urls.slice(1).join(" or ")}` : "";
+  const n = (m.phones || []).length;
+  $("phoneSummary").textContent = !m.on ? "Phones: off" : "Phones";
+  $("phoneBadge").hidden = !n; $("phoneBadge").textContent = String(n);
+  $("settingsSummary").title = "Settings: display, text size, phones" + (!m.on ? " (phone control is off)" : n ? ` (${n} phone${n > 1 ? "s" : ""} connected)` : "");
+  const row = (p, label, cmd) => {
+    const li = document.createElement("li");
+    const t = document.createElement("span"); t.textContent = p.name;
+    const sm = document.createElement("small"); sm.textContent = p.since ? `${p.ip}, since ${p.since}` : p.ip; t.appendChild(sm);
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn small"; b.textContent = label;
+    b.onclick = () => command({ cmd, ip: p.ip });
+    li.append(t, b); return li;
+  };
+  $("phoneList").replaceChildren(...(n ? m.phones.map(p => row(p, "Disconnect", "phone_block"))
+    : [Object.assign(document.createElement("li"), { textContent: m.on ? "No phones yet." : "Phone control is off." })]));
+  const blocked = m.blocked || [];
+  $("blockedBox").hidden = !blocked.length;
+  $("blockedList").replaceChildren(...blocked.map(p => row(p, "Allow again", "phone_unblock")));
+}
+
+/* ---------------- commands ---------------- */
+let ws = null;
+function command(c) {
+  if (LIVE) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(c));
+    else toast("Not connected to the console server yet.");
+    return;
+  }
+  if (DEMO) demoCommand(c);
+}
+$("holdBtn").onclick = () => command({ cmd: "hold", on: $("holdBtn").getAttribute("aria-pressed") !== "true" });
+const stepLine = (delta) => command({ cmd: "step", delta });     // arrow keys; the buttons were removed
+$("resetBtn").onclick = () => command({ cmd: "reset" });
+$("suggestBtn").onclick = () => command({ cmd: "accept_suggestion" });
+$("forgetLearnt").onclick = () => {
+  if (confirm("Forget everything the console has learnt from shabads picked by hand? This cannot be undone.")) command({ cmd: "forget_learning" });
+};
+$("backBtn").onclick = () => { const p = S.state && S.state.previous; if (p) command({ cmd: "back", sid: p.sid }); };
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  if (LIVE && b.getAttribute("aria-pressed") === "true") return;      // already chosen (Start over begins again)
+  const m = b.dataset.mode;
+  command(m === "akhand" ? { cmd: "mode", mode: "paath", bani_id: null, sehaj: true }
+        : m === "paath" ? { cmd: "mode", mode: "paath", bani_id: null, sehaj: false }     // the bani found by itself
+        : { cmd: "mode", mode: "kirtan", bani_id: null, sehaj: false });
+});
+$("bani").onchange = () => command({ cmd: "mode", mode: "paath", bani_id: $("bani").value || null, sehaj: false });
+
+document.addEventListener("keydown", (e) => {
+  if (DISPLAY_VIEW) return;
+  if (e.target.closest && e.target.closest("input, select, textarea, .results")) return;
+  if (e.key === "/" && LIVE) { e.preventDefault(); ptab("search"); $("q").focus(); $("q").select(); return; }
+  if (e.key === " ") { e.preventDefault(); $("holdBtn").click(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); stepLine(-1); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); stepLine(1); }
+  else if (e.key === "r" || e.key === "R") $("resetBtn").click();
+  else if ((e.key === "b" || e.key === "B") && !$("backBox").hidden) $("backBtn").click();
+  else if ((e.key === "n" || e.key === "N") && !$("akvBox").hidden && !$("akvNext").hidden) $("akvNext").click();
+  else if ((e.key === "m" || e.key === "M") && LIVE) $("micBtn").click();
+  else if (/^[1-3]$/.test(e.key) && !$("candsBox").hidden) {
+    const c = S.state && S.state.candidates && S.state.candidates[+e.key - 1];
+    if (c) command({ cmd: "confirm", sid: c.sid });
+  }
+});
+
+document.querySelectorAll("[data-choice]").forEach(i => i.onchange = () => {
+  const change = { [i.dataset.choice]: i.value };
+  if (LIVE) command(Object.assign({ cmd: "settings" }, change));
+  else { Object.assign(SET, change); applySettings(); }
+});
+document.querySelectorAll("[data-set]").forEach(i => i.onchange = () => {
+  const change = { [i.dataset.set]: i.checked };
+  if (LIVE) command(Object.assign({ cmd: "settings" }, change));
+  else { Object.assign(SET, change); applySettings(); }
+});
+const refreshIp = () => { command({ cmd: "refresh_ip" }); toast("Looking at the network again\u2026"); };
+$("ovRefresh").onclick = refreshIp; $("phoneRefresh").onclick = refreshIp;
+window.addEventListener("online", () => { if (LIVE) command({ cmd: "refresh_ip" }); });     // wifi came back: update the addresses by itself
+function renderUpdate(m) {
+  let t;
+  if (m.restarting) t = "Installing the update and restarting…";
+  else if (!m.frozen) t = "Updates work in the installed app.";
+  else if (m.ready) t = `Update ${m.ready} is ready. It installs when the app is closed, or next time it starts.`;
+  else if (m.checking) t = "Looking for updates…";
+  else if (!m.found) t = "The updates can't be reached from this computer (is it online?). Version " + m.version + ".";
+  else t = "Up to date (version " + m.version + ")." + (m.error ? " " + m.error : "");
+  $("updText").textContent = t;
+  $("updGo").hidden = !m.ready || !!m.restarting;
+  if (m.checking) setTimeout(() => LIVE && command({ cmd: "update_status" }), 4000);
+}
+$("updCheck").onclick = () => { $("updText").textContent = "Looking for updates…"; command({ cmd: "update_check" }); };
+$("updGo").onclick = () => { if (confirm("Close the app and install the update now? It will start again by itself.")) command({ cmd: "update_restart" }); };
+$("updDir").addEventListener("input", () => soon("ud", () => { if (LIVE) command({ cmd: "settings", update_dir: $("updDir").value.trim() }); }, 600));
+setTimeout(() => { if (LIVE) command({ cmd: "update_status" }); }, 3000);
+$("noticeText").addEventListener("input", () => soon("nt", () => {
+  const v = $("noticeText").value.trim().slice(0, 200);
+  if (LIVE) command({ cmd: "settings", notice_text: v || NOTICE_DEFAULT }); else { SET.notice_text = v; applySettings(); }
+}, 400));
+document.querySelectorAll("[data-stab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-stab]").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  document.querySelectorAll("[data-spage]").forEach(pg => { pg.hidden = pg.dataset.spage !== b.dataset.stab; });
+});
+/* ---------------- Screens: projector, TV, livestream overlay ---------------- */
+const SCR = { display: 0, overlay: 0, cast: null };
+function renderScreens() {
+  const d = SCR.display, o = SCR.overlay, c = SCR.cast && SCR.cast.mode !== "starting" ? SCR.cast : null;
+  $("projState").textContent = d ? "On" : ""; $("projState").classList.toggle("on", !!d);
+  $("projState").title = d ? `${d} sangat screen${d > 1 ? "s" : ""} open (the projector, a TV's browser or a Chromecast)` : "";
+  $("projClose").hidden = !d;
+  $("projBtn").textContent = d ? "Open it again" : "Open the projector screen";
+  $("ovState").textContent = o ? "In use" : ""; $("ovState").classList.toggle("on", !!o);
+  const on = [d ? "the projector" : "", c ? `casting to ${c.name}` : "", o ? "the livestream overlay" : ""].filter(Boolean);
+  $("screensBadge").hidden = !on.length;
+  $("screensSummary").title = on.length ? `Showing on ${on.join(", ")}` : "Show the Gurbani to the sangat: projector, TV, livestream";
+}
+$("projClose").onclick = async () => { try { await fetch("/api/display/close", { method: "POST" }); } catch (e) { /* closed already */ } };
+function ovView(on) { $("ovView").hidden = !on; $("screensMain").hidden = on; ovPreview(on); }
+$("ovOpen").onclick = () => ovView(true);
+$("ovBack").onclick = () => ovView(false);
+$("projBtn").onclick = async () => {
+  try {
+    const r = await (await fetch("/api/display/open", { method: "POST" })).json();
+    if (r.opened) { toast(r.second_screen ? "The display is open full screen on the second screen." : "The display window is open. Drag it to the projector screen if needed; press F11 for full screen."); return; }
+  } catch (e) { /* fall back to a browser window */ }
+  window.open("/display", "gurbani-display", "popup,width=1280,height=720");
+  toast("Drag the display window to the projector screen and press F11 for full screen.");
+};
+$("castOther").onclick = async () => {
+  $("screensPanel").open = false;
+  if (!("PresentationRequest" in window)) { toast("Casting isn't available here. In Edge or Chrome, open the browser menu and choose Cast."); return; }
+  try { await new PresentationRequest([location.origin + "/display"]).start(); toast("Casting the display from this browser."); }
+  catch (e) { if (e && e.name !== "AbortError") toast("No cast device was found, or casting was cancelled. The TV must be on the same network."); }
+};
+/* ---------------- Overlay menu (livestream) ---------------- */
+const OV_THEMES = [
+  { name: "Navy and gold", bg: "#0F1A30", gc: "#FFFFFF", tc: "#F2D9A6" },
+  { name: "Black and white", bg: "#000000", gc: "#FFFFFF", tc: "#E6E6E6" },
+  { name: "Kesri", bg: "#F2A33A", gc: "#14213D", tc: "#14213D" },
+  { name: "White and navy", bg: "#FFFFFF", gc: "#14213D", tc: "#3A4A6B" },
+  { name: "Blue", bg: "#274F69", gc: "#FFFFFF", tc: "#CFE6F5" },
+  { name: "Khalsa gold", bg: "#58330A", gc: "#FFBA00", tc: "#FFE2A0" },
+];
+$("ovThemes").replaceChildren(...OV_THEMES.map(t => {
+  const b = document.createElement("button"); b.type = "button"; b.dataset.theme = t.name; b.title = t.name;
+  const sw = document.createElement("b"); sw.style.background = t.bg; sw.style.color = t.gc; sw.textContent = "ਵਾਹਿਗੁਰੂ";
+  const en = document.createElement("i"); en.style.color = t.tc; en.textContent = "Translation"; sw.appendChild(en);
+  const nm = document.createElement("small"); nm.textContent = t.name;
+  b.append(sw, nm);
+  b.onclick = () => command({ cmd: "settings", ov_bg: t.bg, ov_gc: t.gc, ov_tc: t.tc });
+  return b;
+}));
+const opText = (v) => +v === 0 ? "Text only" : v + "%";
+function applyOverlaySettings() {
+  document.querySelectorAll("#ovPos button, #ovBars button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pos === SET.ov_pos)));
+  const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+  document.querySelectorAll("#ovThemes button").forEach(b => {
+    const t = OV_THEMES.find(x => x.name === b.dataset.theme);
+    b.setAttribute("aria-pressed", String(same(t.bg, SET.ov_bg) && same(t.gc, SET.ov_gc) && same(t.tc, SET.ov_tc)));
+  });
+  document.querySelectorAll("[data-ovc]").forEach(i => { if (document.activeElement !== i) i.value = String(SET[i.dataset.ovc]).toLowerCase(); });
+  if (document.activeElement !== $("ovWidth")) $("ovWidth").value = SET.ov_width;
+  if (document.activeElement !== $("ovOp")) $("ovOp").value = SET.ov_op;
+  $("ovWidthOut").textContent = SET.ov_width + "%";
+  $("ovOpOut").textContent = opText(SET.ov_op);
+}
+const later = {};
+function soon(key, fn, ms = 200) { clearTimeout(later[key]); later[key] = setTimeout(fn, ms); }
+document.querySelectorAll("#ovPos button, #ovBars button").forEach(b => b.onclick = () => command({ cmd: "settings", ov_pos: b.dataset.pos }));
+document.querySelectorAll("[data-ovc]").forEach(i => i.addEventListener("input", () =>
+  soon(i.dataset.ovc, () => command({ cmd: "settings", [i.dataset.ovc]: i.value }))));
+$("ovWidth").addEventListener("input", () => { $("ovWidthOut").textContent = $("ovWidth").value + "%";
+  soon("w", () => command({ cmd: "settings", ov_width: +$("ovWidth").value })); });
+$("ovOp").addEventListener("input", () => { $("ovOpOut").textContent = opText($("ovOp").value);
+  soon("op", () => command({ cmd: "settings", ov_op: +$("ovOp").value })); });
+$("ovLocal").textContent = location.origin + "/overlay";
+document.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
+  const t = $(b.dataset.copy).textContent;
+  try { await navigator.clipboard.writeText(t); toast("Copied. Paste it as the URL of a Browser source in OBS."); }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($(b.dataset.copy)); getSelection().removeAllRanges(); getSelection().addRange(r); toast("Press Ctrl+C to copy."); }
+});
+function ovPreview(on) {                // a live preview while the menu is open
+  const box = $("ovPreview");
+  if (!on) { box.replaceChildren(); return; }
+  const f = document.createElement("iframe");
+  f.src = "/overlay?preview=1"; f.title = "Overlay preview"; f.tabIndex = -1;
+  box.replaceChildren(f);
+  requestAnimationFrame(() => { f.style.transform = `scale(${box.clientWidth / 1920})`; });
+}
+
+/* ---------------- ਵਾਹਿਗੁਰੂ / message ---------------- */
+$("msgVaheguru").onclick = () => sendMsg({ kind: "vaheguru" });
+$("msgForm").onsubmit = (e) => { e.preventDefault(); const t = $("msgText").value.trim(); if (t) { sendMsg({ kind: "text", text: t }); $("msgText").value = ""; } };
+$("msgPick").onclick = () => $("msgFile").click();
+$("msgFile").onchange = async () => {
+  const f = $("msgFile").files[0]; $("msgFile").value = "";
+  if (!f) return;
+  try {
+    const r = await fetch("/api/message-image", { method: "POST", body: f });
+    const j = await r.json();
+    if (!r.ok) { toast(j.error || "That picture could not be used."); return; }
+    sendMsg({ kind: "image", image: j.image });
+  } catch (e) { toast("That picture could not be sent to the console."); }
+};
+const msgBack = () => command({ cmd: "screen_msg", kind: null });
+$("msgClear").onclick = msgBack;
+$("msgOnBack").onclick = msgBack;
+["msgScreens", "msgOverlay"].forEach(id => $(id).addEventListener("change", () => {
+  const m = S.msg;                       // a message is up: move it to the screens now ticked
+  if (m) sendMsg(m.kind === "image" ? { kind: "image", image: m.image.split("/").pop() } : { kind: m.kind, text: m.text });
+}));
+
+/* menus (Display, Phone, History, Cast): only one open at a time, and a click
+   anywhere outside the open one closes it, so they never pile up on each other */
+document.querySelectorAll("details.settings").forEach((d) => d.addEventListener("toggle", () => {
+  if (d.open) document.querySelectorAll("details.settings[open]").forEach((o) => { if (o !== d && !o.contains(d)) o.open = false; });
+}));
+document.addEventListener("pointerdown", (e) => {
+  document.querySelectorAll("details.settings[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; });
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") document.querySelectorAll("details.settings[open]").forEach((d) => { d.open = false; });
+});
+$("screensPanel").addEventListener("toggle", () => { if ($("screensPanel").open) command({ cmd: "cast_scan" }); else ovView(false); });
+$("castStop").onclick = () => command({ cmd: "cast_stop" });
+const CAST = { last: null };
+function renderCast(m) {
+  CAST.last = m;
+  const a = m.active;
+  SCR.cast = a || null; renderScreens();
+  $("castNow").hidden = !a;
+  if (a) $("castNowText").textContent = a.mode === "starting" ? `Starting on ${a.name}\u2026 (this can take up to half a minute)`
+    : `Casting to ${a.name} since ${a.since}` + (a.mode === "pictures" ? " (sending a picture of each line)" : "");
+  const devs = m.devices || [];
+  $("castList").replaceChildren(...devs.map(d => {
+    const li = document.createElement("li"), b = document.createElement("button"); b.type = "button";
+    b.textContent = d.name; const sm = document.createElement("small");
+    sm.textContent = a && a.uuid === d.uuid ? "Showing the display now" : (d.model || "Chromecast"); b.appendChild(sm);
+    b.onclick = () => { command({ cmd: "cast_start", uuid: d.uuid }); toast(`Casting to ${d.name}\u2026`); };
+    li.appendChild(b); return li;
+  }));
+  $("castNote").textContent = !m.available ? "Casting to a Chromecast isn't available in this copy. Use the browser's own Cast below."
+    : m.error ? m.error
+    : devs.length ? "Pick one. The TV must be on the same Wi-Fi as this computer."
+    : "Looking for Chromecasts on this Wi-Fi\u2026 Make sure the TV is on and on the same network.";
+}
+
+/* ---------------- live mode ---------------- */
+function connect() {
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?role=${DISPLAY_VIEW ? "display" : "console"}`);
+  ws.binaryType = "arraybuffer";
+  ws.onmessage = (ev) => { receive(JSON.parse(ev.data)); render(); };
+  ws.onclose = () => { $("statusText").textContent = "Reconnecting to the console server"; setTimeout(connect, 2000); };
+}
+let actx = null, tap = null, micStream = null, micNode = null, micOn = false, wakeLock = null;
+let pending = [], pendingLen = 0, levelAvg = 0, quietSince = null;
+const TAP_CODE = `class Tap extends AudioWorkletProcessor {
+  constructor() { super(); this.b = new Float32Array(2048); this.n = 0; }
+  process(inputs) { const c = inputs[0] && inputs[0][0];
+    if (c) for (let k = 0; k < c.length; k++) { this.b[this.n++] = c[k];
+      if (this.n === 2048) { this.port.postMessage(this.b.slice(0)); this.n = 0; } }
+    return true; } }
+registerProcessor("tap", Tap);`;
+async function audioSetup() {
+  if (!actx) {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    const mute = actx.createGain(); mute.gain.value = 0; mute.connect(actx.destination);
+    if (actx.audioWorklet) {
+      await actx.audioWorklet.addModule(URL.createObjectURL(new Blob([TAP_CODE], { type: "text/javascript" })));
+      tap = new AudioWorkletNode(actx, "tap");
+      tap.port.onmessage = (e) => onAudio(e.data);
+    } else {                                  // older browsers
+      tap = actx.createScriptProcessor(4096, 1, 1);
+      tap.onaudioprocess = (e) => onAudio(e.inputBuffer.getChannelData(0));
+    }
+    tap.connect(mute);
+  }
+  if (actx.state === "suspended") await actx.resume();
+}
+function onAudio(buf) {
+  if (!micOn) return;
+  showLevel(buf);
+  push(downsample(buf, actx.sampleRate));
+}
+function showLevel(buf) {
+  let sum = 0, peak = 0;
+  for (let i = 0; i < buf.length; i++) { const v = buf[i]; sum += v * v; if (Math.abs(v) > peak) peak = Math.abs(v); }
+  levelAvg = 0.8 * levelAvg + 0.2 * Math.sqrt(sum / buf.length);
+  $("meterFill").style.width = `${Math.min(100, Math.sqrt(levelAvg) * 160)}%`;
+  $("meter").classList.toggle("hot", peak > 0.98);
+  const lit = Math.round(Math.min(1, Math.sqrt(levelAvg) * 1.6) * 5);
+  [...$("lvlBars").children].forEach((b, i) => b.classList.toggle("on", i < lit));
+  $("lvlBars").classList.toggle("hot", peak > 0.98);
+  const now = performance.now();
+  if (levelAvg < 0.002) { quietSince = quietSince || now; } else { quietSince = null; }
+  const silent = quietSince !== null && now - quietSince > 6000;
+  if (silent !== !$("micHint").hidden) {
+    $("micHint").hidden = !silent;
+    $("micHint").textContent = "No sound is reaching the console. Check that the right input is selected and the microphone or sound desk cable is connected.";
+  }
+}
+function downsample(buf, rate) {
+  const ratio = rate / 16000, n = Math.floor(buf.length / ratio), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = Math.floor(i * ratio), b = Math.min(buf.length, Math.floor((i + 1) * ratio));
+    let s = 0; for (let j = a; j < b; j++) s += buf[j];
+    out[i] = s / Math.max(1, b - a);
+  }
+  return out;
+}
+function push(chunk) {
+  pending.push(chunk); pendingLen += chunk.length;
+  if (pendingLen < 8000) return;
+  const all = new Float32Array(pendingLen); let o = 0;
+  for (const c of pending) { all.set(c, o); o += c.length; }
+  pending = []; pendingLen = 0;
+  if (ws && ws.readyState === 1) ws.send(all.buffer);
+}
+async function listInputs() {
+  const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput");
+  const sel = $("micPick"), current = micStream && micStream.getAudioTracks()[0].getSettings().deviceId;
+  sel.replaceChildren(...devs.map((d, i) => { const o = document.createElement("option");
+    o.value = d.deviceId; o.textContent = d.label || `Input ${i + 1}`; return o; }));
+  if (current) sel.value = current;
+  sel.hidden = devs.length < 2;
+  const cur = devs.find(d => d.deviceId === current) || devs[0];
+  $("micName").textContent = (cur && cur.label) || "Microphone";
+  renderMicGroup();
+}
+function renderMicGroup() {               // the footer: the input chosen (or the phone listening), and the sound
+  $("micOwner").hidden = !phoneMic;
+  $("micName").hidden = !!phoneMic || !$("micPick").hidden;
+  if (phoneMic) $("micPick").hidden = true;
+}
+async function startMic() {
+  await audioSetup();
+  const id = $("micPick").value;
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: {
+    deviceId: id ? { exact: id } : undefined, channelCount: 1,
+    echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  micNode = actx.createMediaStreamSource(micStream); micNode.connect(tap); micOn = true;
+  micStream.getAudioTracks()[0].onended = () => {
+    stopMic(); toast("The microphone was disconnected. Reconnect it, then press Start listening.");
+  };
+  $("micBtn").firstChild.textContent = "Stop listening ";
+  $("micBtn").classList.remove("primary");
+  await listInputs();
+  keepAwake();
+}
+function stopMic() {
+  if (micNode) micNode.disconnect();
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  micOn = false; quietSince = null; levelAvg = 0;
+  $("meterFill").style.width = "0"; $("micHint").hidden = true;
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  $("micBtn").firstChild.textContent = "Start listening ";
+  $("micBtn").classList.add("primary");
+  [...$("lvlBars").children].forEach(b => b.classList.remove("on"));
+  render();
+}
+async function keepAwake() {
+  try { if (micOn && "wakeLock" in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request("screen");
+        if (wakeLock) wakeLock.onrelease = () => { wakeLock = null; }; } catch (e) { /* not supported */ }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+/* whose microphone: this laptop's, or a phone's */
+let phoneMic = null;
+function setMicLabel() {
+  const b = $("micBtn").firstChild;
+  if (phoneMic) b.textContent = "Use this laptop's mic ";
+  else b.textContent = micOn ? "Stop listening " : "Start listening ";
+  $("micBtn").classList.toggle("primary", !micOn);
+  render(); renderMicGroup();
+}
+async function micOwner(m) {
+  phoneMic = m.owner === "phone" ? m.name || "a phone" : null;
+  $("micOwner").hidden = !phoneMic;
+  if (phoneMic) {
+    $("micOwner").textContent = `Listening with ${phoneMic}'s microphone`;
+    if (micOn) stopMic();
+    toast(`${phoneMic} is now the microphone. The laptop's microphone is off.`);
+  } else if (m.start_laptop && !micOn) {        // the phone handed the microphone back
+    try { await startMic(); toast(`The laptop's microphone is listening again (${m.why}).`); }
+    catch (e) { toast(`The phone stopped listening (${m.why}). Press Start listening to use the laptop's microphone.`); }
+  }
+  setMicLabel();
+}
+$("micBtn").onclick = async () => {
+  try {
+    if (phoneMic) { command({ cmd: "mic_laptop" }); phoneMic = null; $("micOwner").hidden = true; await startMic(); }
+    else if (micOn) stopMic(); else await startMic();
+  } catch (err) { stopMic(); toast("The microphone could not be opened. Allow microphone access for this page, then try again."); }
+  setMicLabel();
+};
+$("micPick").onchange = async () => { if (micOn) { stopMic(); try { await startMic(); } catch (e) { toast("That input could not be opened."); } } };
+
+/* ---------------- demo mode ---------------- */
+const D = { msgs: [], idx: 0, t: 0, dur: 0, playing: false, timer: null, last: 0 };
+function fmt(s) { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+function demoLoad(i) {
+  const sess = DEMO.sessions[i];
+  D.msgs = sess.messages; D.dur = sess.duration;
+  $("demoScrub").max = String(Math.ceil(D.dur));
+  demoSeek(0);
+}
+function demoSeek(t) {
+  S.tracks = {}; S.state = null; S.localPos = null; S.lastCur = null; S.lastList = null; S.lastCands = null;
+  D.idx = 0; D.t = t;
+  demoAdvance(true);
+}
+function demoAdvance(rebuild) {
+  while (D.idx < D.msgs.length) {
+    const m = D.msgs[D.idx];
+    const next = D.msgs[D.idx + 1];
+    const mt = m.type === "state" ? m.t : (next ? next.t : 0);
+    if (mt > D.t) break;
+    if (rebuild || !(S.localHold && m.type === "state")) receive(m);
+    D.idx++;
+  }
+  $("demoScrub").value = String(Math.floor(D.t));
+  $("demoTime").textContent = `${fmt(D.t)} of ${fmt(D.dur)}`;
+  render();
+}
+function demoTick() {
+  const now = performance.now(), dt = (now - D.last) / 1000; D.last = now;
+  D.t = Math.min(D.dur, D.t + dt * Number($("demoSpeed").value));
+  demoAdvance();
+  if (D.t >= D.dur) demoPause();
+}
+function demoPlay() { if (D.t >= D.dur) demoSeek(0); D.playing = true; D.last = performance.now(); D.timer = setInterval(demoTick, 100); $("demoPlay").textContent = "Pause"; }
+function demoPause() { D.playing = false; clearInterval(D.timer); $("demoPlay").textContent = "Play"; }
+function demoCommand(c) {
+  const st = S.state;
+  if (c.cmd === "hold") { S.localHold = !!c.on; if (!S.localHold) demoSeek(D.t); else render(); }
+  else if (c.cmd === "step" || c.cmd === "goto") {
+    const tr = st && S.tracks[st.track_id]; if (!tr) return;
+    const base = currentPos() ?? 0;
+    S.localPos = Math.max(0, Math.min(tr.lines.length - 1, c.cmd === "goto" ? c.pos : base + c.delta));
+    render();
+  } else if (c.cmd === "reset") { S.localHold = false; demoSeek(0); }
+  else if (c.cmd === "mode") {
+    const i = DEMO.sessions.findIndex(s => s.mode === c.mode);
+    if (i >= 0 && String(i) !== $("demoPick").value) { $("demoPick").value = String(i); demoLoad(i); toast(`Replaying the ${DEMO.sessions[i].mode} recording`); }
+  } else if (c.cmd === "confirm") toast("In the live console this puts the chosen shabad on screen.");
+  else if (c.cmd === "accept_suggestion") toast("In the live console this switches to following the whole bani.");
+}
+function demoInit() {
+  $("demoSource").hidden = false;
+  DEMO.sessions.forEach((s, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = s.title; $("demoPick").appendChild(o); });
+  $("demoPick").onchange = () => { demoPause(); demoLoad(+$("demoPick").value); };
+  $("demoPlay").onclick = () => (D.playing ? demoPause() : demoPlay());
+  $("demoScrub").oninput = () => demoSeek(Number($("demoScrub").value));
+  $("empty").textContent = "This preview replays what the console showed for two real sessions. On your computer the console listens to the microphone or sound desk instead. Press Play to start; Hold, the arrow keys and the line list all work.";
+  demoLoad(0);
+}
+
+/* ---------------- start ---------------- */
+if (DISPLAY_VIEW || !LIVE) $("splash").hidden = true;    // the sangat screen never shows the loading screen
+if (LIVE && DISPLAY_VIEW) {
+  document.body.classList.add("display-view");
+  document.title = "Gurbani display";
+  document.addEventListener("dblclick", () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); });
+  window.addEventListener("resize", fitDisplay);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitDisplay);
+  connect();
+} else if (LIVE) { $("liveSource").hidden = false; $("micBtn").hidden = false; $("showGroup").hidden = false; $("searchBox").hidden = false; $("msgPanel").hidden = false; connect(); }
+else if (DEMO) { demoInit(); applySettings(); }
+else $("empty").textContent = "This page opens by itself when you start Gurbani Audio Searcher. Close this tab and start it that way.";
+$("version").textContent = "Version " + VERSION_NAME;
+$("version").title = VERSION;
+render();
+})();
+</script>
+</body>
+</html>

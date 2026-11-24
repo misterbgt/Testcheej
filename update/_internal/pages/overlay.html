@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="pa">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="normal">
+<title>Gurbani overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta+Mahee:wght@500;600&family=Tiro+Gurmukhi&display=swap" rel="stylesheet">
+<style>
+/* Livestream overlay: a see-through page for OBS, vMix or Streamlabs (a Browser source,
+   1920 x 1080). Only the Gurbani is drawn, at the position chosen in the console's
+   Overlay menu; everything else stays transparent, so the camera shows through. */
+:root {
+  --gur: "Tiro Gurmukhi", "Noto Serif Gurmukhi", "Raavi", "Nirmala UI", serif;
+  --ui: "Mukta Mahee", "Segoe UI", system-ui, sans-serif;
+  --bgc: rgba(15, 26, 48, 0); --gc: #FFFFFF; --tc: #F2D9A6; --w: 80vw;
+  --gs: 1; --ts: 1; --fit: 1; --shadow: none; --pad: 1.6vh 2.4vw;
+  color-scheme: normal;
+}
+html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
+.frame { position: fixed; inset: 0; display: flex; flex-direction: column; padding: 4vh 3vw; box-sizing: border-box; }
+/* The bar (or panel, or box) is one steady piece: it fades in when the first line comes and
+   out when nothing has been shown for a moment; between lines it does not move. Only the
+   words change, crossfading from one line to the next. The test notice is part of it,
+   always at its lowest edge. */
+body.bar .frame { padding: 0; }
+body.side .frame { padding: 0; flex-direction: row; align-items: stretch; }
+body.side.h-left .frame { justify-content: flex-start; }
+body.side.h-right .frame { justify-content: flex-end; }
+body.v-top .frame { justify-content: flex-start; }
+body.v-bottom .frame { justify-content: flex-end; }
+body.v-middle .frame { justify-content: center; }
+body.h-left .frame { align-items: flex-start; }
+body.h-middle .frame { align-items: center; }
+body.h-right .frame { align-items: flex-end; }
+body.side .frame { align-items: stretch; }
+.box { width: var(--w); max-width: 100%; box-sizing: border-box; background: var(--bgc); padding: var(--pad);
+       border-radius: 1.2vh; text-shadow: var(--shadow); opacity: 0; transition: opacity .35s ease;
+       display: flex; flex-direction: column; text-align: center; }
+.box.on { opacity: 1; }
+.box[hidden] { display: none; }
+body.bar .box { width: 100%; border-radius: 0; padding: 1.8vh 4vw 1.2vh; }
+body.side .box { width: var(--w); height: 100%; border-radius: 0; padding: 3vh 1.6vw 1.6vh; }
+body.side .stack { flex: 1; }
+body.h-left:not(.bar):not(.side) .box { text-align: left; }
+body.h-right:not(.bar):not(.side) .box { text-align: right; }
+.stack { position: relative; transition: height .3s ease; }
+.layer { position: absolute; left: 0; right: 0; top: 0; opacity: 0; transition: opacity .28s ease; }
+body.side .layer { top: 50%; transform: translateY(-50%); }
+.layer.on { opacity: 1; }
+p { margin: 0; text-wrap: balance; }
+.g { font-family: var(--gur); color: var(--gc); font-size: calc(5.4vh * var(--gs) * var(--fit)); line-height: 1.38; }
+.en { color: var(--tc); font: 600 calc(3.1vh * var(--ts) * var(--fit))/1.35 var(--ui); margin-top: .7vh; }
+.en[hidden], .tr[hidden] { display: none; }
+.tr { color: var(--tc); opacity: .82; font: 500 calc(2.6vh * var(--ts) * var(--fit))/1.35 var(--ui); margin-top: .5vh; }
+body[data-gw="bold"] .g { font-weight: 700; -webkit-text-stroke: .014em currentColor; }
+body[data-gw="extra"] .g { font-weight: 900; -webkit-text-stroke: .04em currentColor; }
+/* the test notice, if switched on: one small line inside the same bar, under the words */
+body.side .notice { margin-top: auto; }
+.notice { margin: 1vh 0 0; font: 500 calc(2.1vh * var(--ns, 1))/1.3 var(--ui); color: var(--gc); opacity: .72; }
+.notice[hidden] { display: none; }
+/* a message instead of the Gurbani: ਵਾਹਿਗੁਰੂ, a few words, or a picture */
+.msg { color: var(--gc); font: 600 calc(5.4vh * var(--gs) * var(--fit))/1.3 var(--ui); }
+.msg.gur { font-family: var(--gur); font-weight: 400; }
+.msg.big { font-size: calc(8vh * var(--gs) * var(--fit)); }
+.pic { display: block; max-width: 100%; max-height: 55vh; margin: 0 auto; border-radius: .6vh; }
+body.h-left .pic { margin-left: 0; }
+body.h-right .pic { margin-right: 0; }
+.pic[hidden], .msg[hidden], .g[hidden], .en[hidden] { display: none; }
+</style>
+</head>
+<body class="v-top h-middle bar">
+<div class="frame">
+  <div class="box" id="box" hidden>
+    <div class="stack" id="stack">
+      <div class="layer" id="la"><p class="g"></p><p class="en"></p><p class="tr" hidden></p><p class="msg" hidden></p><img class="pic" alt="" hidden></div>
+      <div class="layer" id="lb"><p class="g"></p><p class="en"></p><p class="tr" hidden></p><p class="msg" hidden></p><img class="pic" alt="" hidden></div>
+    </div>
+    <p class="notice" id="notice" hidden>Vaheguru - This auto-Gurbani app is in testing - please forgive accuracy or glitches</p>
+  </div>
+</div>
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const VERSION = "__VERSION__";
+const PREVIEW = new URLSearchParams(location.search).has("preview");
+const SAMPLE = { g: "ਸੋ ਸਚੁ ਮੰਦਰੁ ਜਿਤੁ ਸਚੁ ਧਿਆਈਐ ॥", en: "True is that temple, within which one meditates on the True Lord.",
+                 tr: "so sach mandar jit sach dhiaaeeai" };
+const SET = { ov_pos: "top-bar", ov_width: 80, ov_bg: "#0F1A30", ov_gc: "#FFFFFF", ov_tc: "#F2D9A6", ov_op: 85,
+              ov_gs: 100, ov_ts: 100, ov_en: true, ov_tr: false, ov_notice: false, ov_ns: 100,
+              g_weight: "normal", notice_text: "" };
+const DEFAULT_NOTICE = "Vaheguru - This auto-Gurbani app is in testing - please forgive accuracy or glitches";
+const S = { tracks: {}, state: null, msg: null, shown: null, token: 0, connected: false };
+
+function checkVersion(v) {             // left open in OBS across an update: reload once
+  if (!v || v === VERSION) return;
+  const u = new URL(location.href);
+  if (u.searchParams.get("v") === v) return;
+  u.searchParams.set("v", v); location.replace(u.toString());
+}
+function rgb(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  const n = m ? parseInt(m[1], 16) : 0x0F1A30;
+  return [n >> 16, (n >> 8) & 255, n & 255];
+}
+const light = (hex) => { const [r, g, b] = rgb(hex); return 0.299 * r + 0.587 * g + 0.114 * b > 140; };
+function applySettings() {
+  const r = document.documentElement.style;
+  const op = Math.max(0, Math.min(100, +SET.ov_op || 0)) / 100;
+  r.setProperty("--bgc", `rgba(${rgb(SET.ov_bg).join(", ")}, ${op})`);
+  r.setProperty("--gc", SET.ov_gc); r.setProperty("--tc", SET.ov_tc);
+  r.setProperty("--w", Math.max(30, Math.min(100, +SET.ov_width || 80)) + "vw");
+  r.setProperty("--gs", String((+SET.ov_gs || 100) / 100)); r.setProperty("--ts", String((+SET.ov_ts || 100) / 100));
+  // text only (or a faint background): a soft shadow keeps the words readable on any picture
+  r.setProperty("--shadow", op < 0.6 ? (light(SET.ov_gc) ? "0 .25vh .9vh rgba(0,0,0,.85), 0 0 .3vh rgba(0,0,0,.6)"
+                                                         : "0 .25vh .9vh rgba(255,255,255,.85), 0 0 .3vh rgba(255,255,255,.6)") : "none");
+  r.setProperty("--pad", op > 0 ? "1.6vh 2.4vw" : "0.6vh 0.6vw");
+  const pos = /^(top|middle|bottom)-bar$|^(left|right)-side$|^(top|bottom)-(left|middle|right)$/.test(SET.ov_pos) ? SET.ov_pos : "top-bar";
+  let cls;
+  if (/-bar$/.test(pos)) cls = `bar v-${pos.split("-")[0]} h-middle`;
+  else if (/-side$/.test(pos)) cls = `side v-middle h-${pos.split("-")[0]}`;
+  else { const [v, h] = pos.split("-"); cls = `v-${v} h-${h}`; }
+  document.body.className = cls;
+  document.body.dataset.gw = SET.g_weight || "normal";
+  const nt = $("notice");
+  nt.hidden = !SET.ov_notice; nt.textContent = SET.notice_text || DEFAULT_NOTICE;
+  r.setProperty("--ns", String((+SET.ov_ns || 100) / 100));
+  S.shown = null; render();
+}
+function current() {
+  if (S.msg && S.msg.overlay) return { msg: S.msg, key: "msg:" + (S.msg.kind + (S.msg.text || S.msg.image || "")) };
+  const st = S.state;
+  if (st && st.track_id) {
+    const tr = S.tracks[st.track_id];
+    const pos = st.pos !== null && st.pos !== undefined ? st.pos : st.last_pos;
+    if (tr && pos !== null && pos !== undefined && tr.lines[pos]) return { line: tr.lines[pos], key: `${tr.id}:${pos}` };
+  }
+  return PREVIEW ? { line: SAMPLE, key: "sample" } : null;
+}
+const layers = [$("la"), $("lb")];
+let front = 0, hideTimer = null;
+function fillLayer(el, cur) {
+  const q = (c) => el.querySelector(c), m = cur.msg;
+  q(".g").hidden = !!m; q(".msg").hidden = !m || m.kind === "image"; q(".pic").hidden = !m || m.kind !== "image";
+  if (m) {
+    q(".en").hidden = true; q(".tr").hidden = true;
+    if (m.kind === "image") q(".pic").src = m.image;
+    else {
+      q(".msg").textContent = m.text;
+      q(".msg").classList.toggle("gur", /[਀-੿]/.test(m.text));
+      q(".msg").classList.toggle("big", m.kind === "vaheguru");
+    }
+  } else {
+    q(".g").textContent = cur.line.g || "";
+    const en = SET.ov_en ? cur.line.en || "" : "";
+    q(".en").textContent = en; q(".en").hidden = !en;
+    const tr = SET.ov_tr ? cur.line.tr || "" : "";
+    q(".tr").textContent = tr; q(".tr").hidden = !tr;
+  }
+}
+const side = () => document.body.classList.contains("side");
+// the height the bar keeps between lines: one line of Gurbani, two of English (and one of
+// transliteration if shown), so ordinary lines never make it grow or shrink
+function reserve() {
+  const vh = window.innerHeight / 100, gs = (+SET.ov_gs || 100) / 100, ts = (+SET.ov_ts || 100) / 100;
+  return (5.4 * gs * 1.38 + (SET.ov_en ? 2 * 3.1 * ts * 1.35 + 0.7 : 0) + (SET.ov_tr ? 2.6 * ts * 1.35 + 0.5 : 0)) * vh;
+}
+function fitLayer(el) {                 // long lines shrink, so the bar never covers too much of the picture
+  const r = el.style; let f = 1;
+  r.setProperty("--fit", "1");
+  const most = (S.msg && S.msg.overlay ? 0.6 : 0.34) * window.innerHeight;
+  const tall = () => el.getBoundingClientRect().height > (side() ? $("stack").clientHeight || most : most);
+  while ((tall() || el.scrollWidth > el.clientWidth + 1) && f > 0.42) { f -= 0.04; r.setProperty("--fit", f.toFixed(2)); }
+}
+function setHeight(el) {
+  if (side()) { $("stack").style.height = ""; return; }
+  $("stack").style.height = Math.max(reserve(), el.getBoundingClientRect().height) + "px";
+}
+function settle(el) { fitLayer(el); setHeight(el); }
+function show(cur) {
+  clearTimeout(hideTimer); hideTimer = null;
+  const box = $("box");
+  if (box.hidden || !box.classList.contains("on")) {     // the bar comes in, already holding the line
+    const el = layers[front];
+    layers[1 - front].classList.remove("on");
+    box.hidden = false; fillLayer(el, cur); settle(el);
+    el.classList.add("on"); void box.offsetWidth; box.classList.add("on");
+    return;
+  }
+  const back = 1 - front, el = layers[back];            // a new line: crossfade, the bar stays put
+  fillLayer(el, cur); settle(el);
+  el.classList.add("on"); layers[front].classList.remove("on"); front = back;
+}
+function hideSoon() {                    // nothing to show: the bar leaves after a moment, so a short gap between lines does not blink it
+  if (hideTimer || $("box").hidden) return;
+  hideTimer = setTimeout(() => {
+    hideTimer = null;
+    const box = $("box"); box.classList.remove("on");
+    setTimeout(() => { if (!box.classList.contains("on")) { box.hidden = true; layers.forEach(l => l.classList.remove("on")); } }, 450);
+  }, 2000);
+}
+function render() {
+  const cur = S.connected || PREVIEW ? current() : null;
+  const key = cur ? cur.key : null;
+  if (key === S.shown) return;
+  S.shown = key;
+  if (cur) show(cur); else hideSoon();
+}
+function receive(m) {
+  if (m.type === "hello" || m.type === "loading") checkVersion(m.version);
+  if (m.type === "settings") { Object.assign(SET, m.settings); applySettings(); }
+  else if (m.type === "track") S.tracks[m.track.id] = m.track;
+  else if (m.type === "state") S.state = m;
+  else if (m.type === "screen_msg") S.msg = m.msg;
+}
+let gone = null;
+function connect() {
+  const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?role=overlay${PREVIEW ? "&preview=1" : ""}`);
+  ws.onopen = () => { S.connected = true; clearTimeout(gone); };
+  ws.onmessage = (ev) => { receive(JSON.parse(ev.data)); render(); };
+  ws.onclose = () => {
+    // the app was closed: take the Gurbani off the stream after a moment, and keep trying
+    clearTimeout(gone);
+    gone = setTimeout(() => { S.connected = false; S.state = null; S.msg = null; render(); }, 4000);
+    setTimeout(connect, 2000);
+  };
+}
+layers.forEach(l => l.querySelector(".pic").addEventListener("load", () => { if (l.classList.contains("on")) settle(l); }));
+const again = () => { const l = layers[front]; if (S.shown && l.classList.contains("on")) settle(l); };
+window.addEventListener("resize", again);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(again);
+applySettings();
+connect();
+})();
+</script>
+</body>
+</html>
