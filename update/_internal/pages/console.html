@@ -621,6 +621,9 @@ body[data-gw="extra"] .line, body[data-gw="extra"]  .screen-msg p.gur { font-wei
                   <label class="pick">Key
                     <input type="password" id="relKey" maxlength="128" autocomplete="off" aria-label="Key from the plugin" placeholder="Paste the key (kept on this computer)"></label>
                   <div class="row"><button type="button" class="btn small" id="relSave">Save</button></div>
+                  <h4>Signed in to the remote page</h4>
+                  <ul id="relPeople" class="muted"></ul>
+                  <div class="row"><button type="button" class="btn small" id="relKickAll" hidden>Sign everyone out</button></div>
                 </div>
                 <button type="button" class="btn small" id="phoneRefresh" title="Look for the network again, if wifi was joined after the app started">Refresh address</button>
                 <p class="note" id="phoneOther"></p>
@@ -1555,9 +1558,18 @@ function renderRelay(m) {
   else if (m.state === "error") t = "Can't reach the page: " + (m.error || "check the address and key") + ".";
   else t = "Connecting…";
   $("relText").textContent = t;
+  const ul = $("relPeople"), ppl = m.sessions || [];
+  ul.replaceChildren(...ppl.map(x => {
+    const li = document.createElement("li"); li.textContent = (x.online ? "● " : "○ ") + x.label + " · " + x.ip + " · seen " + Math.max(0, Math.round((Date.now() / 1000 - x.seen) / 60)) + " min ago ";
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn small"; b.textContent = "Sign out";
+    b.onclick = () => { if (confirm("Sign out " + x.label + " from the remote page?")) { command({ cmd: "relay_kick", sid: x.sid }); setTimeout(() => command({ cmd: "relay_get" }), 3000); } };
+    li.append(b); return li; }));
+  if (!ppl.length) { const li = document.createElement("li"); li.textContent = "Nobody."; ul.append(li); }
+  $("relKickAll").hidden = !ppl.length;
   if (document.activeElement !== $("relUrl")) $("relUrl").value = m.url || "";
   $("relKey").placeholder = m.key_set ? "Key saved (type a new one to change it)" : "Paste the key (kept on this computer)";
 }
+$("relKickAll").onclick = () => { if (confirm("Sign everyone out of the remote page? They need the PIN again.")) { command({ cmd: "relay_kick", all: true }); setTimeout(() => command({ cmd: "relay_get" }), 3000); } };
 $("relSave").onclick = () => { if (!LIVE) return; command({ cmd: "relay_set", url: $("relUrl").value.trim(), key: $("relKey").value.trim() }); $("relKey").value = ""; $("relText").textContent = "Saved. Connecting…"; setTimeout(() => command({ cmd: "relay_get" }), 3000); };
 setInterval(() => { if (LIVE && !document.hidden) command({ cmd: "relay_get" }); }, 15000);
 setTimeout(() => { if (LIVE) command({ cmd: "relay_get" }); }, 3500);
