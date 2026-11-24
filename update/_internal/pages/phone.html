@@ -480,6 +480,7 @@ ol { list-style: none; margin: 0; padding: 0; }
 (() => {
 "use strict";
 const $ = (id) => document.getElementById(id);
+const RELAY = window.RELAY || null;        // opened from the website (the remote control page): carried by the site, PIN protected
 const WEB = !!window.LOCAL;              // the web version: this phone is the whole app (local.js)
 const GROUP = { following: "follow", held_simran: "hold", held_quiet: "hold", held_user: "hold",
                 finding: "find", listening: "find", lost: "lost", searching_ahead: "hold" };
@@ -827,7 +828,7 @@ function renderHistory(items) {
 
 const VERSION = "__VERSION__";
 function checkVersion(v) {             // a phone page left open from an older version reloads itself
-  if (WEB || !v || v === VERSION) return;   // (the web version updates with the page itself)
+  if (WEB || RELAY || !v || v === VERSION) return;   // (the web version updates with the page itself)
   const u = new URL(location.href);
   if (u.searchParams.get("v") === v) return;
   u.searchParams.set("v", v); location.replace(u.toString());
@@ -1014,6 +1015,7 @@ function renderSizes() {
   }));
 }
 if (WEB) $("menuUpdate").hidden = true;
+if (RELAY) { ["menuCast", "menuScreen", "menuTv", "menuSettings", "menuTry", "listen", "msgPick"].forEach(i => { const e = $(i); if (e) e.hidden = true; }); }
 let UPD = null;
 function renderUpd(m) {
   UPD = m;
@@ -1055,12 +1057,12 @@ document.querySelectorAll("[data-set]").forEach(i => i.onchange = () => send({ c
 document.querySelectorAll("[data-choice]").forEach(i => i.onchange = () => send({ cmd: "settings", [i.dataset.choice]: i.value }, true));
 
 function connect() {
-  ws = WEB ? new LOCAL.Socket("local") : new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?role=remote`);
+  ws = RELAY ? new RELAY.Socket() : WEB ? new LOCAL.Socket("local") : new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?role=remote`);
   ws.onopen = () => { banner(""); disconnected = false; };
   ws.onmessage = (ev) => { receive(JSON.parse(ev.data)); render(); };
   ws.onclose = (ev) => {
     if (ev.code === 4003) { disconnected = true; banner("The console disconnected this phone."); }
-    else if (!disconnected) banner("Lost the connection to the console. Reconnecting… Check this phone is on the same Wi-Fi as the computer.");
+    else if (!disconnected) banner(RELAY ? "Lost the connection. Reconnecting…" : "Lost the connection to the console. Reconnecting… Check this phone is on the same Wi-Fi as the computer.");
     $("statusText").textContent = "Not connected";
     setTimeout(connect, 2500);
   };

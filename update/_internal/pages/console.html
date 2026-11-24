@@ -613,6 +613,15 @@ body[data-gw="extra"] .line, body[data-gw="extra"]  .screen-msg p.gur { font-wei
                   <label class="pick">Update web address or folder (leave blank to use the usual one)
                     <input type="text" id="updDir" maxlength="260" aria-label="Folder the updates are put in" placeholder="Usual update folder"></label>
                 </div>
+                <div class="upd" id="relBox">
+                  <h4>Remote control from anywhere</h4>
+                  <p id="relText" class="muted">Not set up.</p>
+                  <label class="pick">Address (from the Gurbani Remote plugin on the website)
+                    <input type="text" id="relUrl" maxlength="300" aria-label="Address of the remote control page" placeholder="https://…/wp-json/gurbani-remote/v1/"></label>
+                  <label class="pick">Key
+                    <input type="password" id="relKey" maxlength="128" autocomplete="off" aria-label="Key from the plugin" placeholder="Paste the key (kept on this computer)"></label>
+                  <div class="row"><button type="button" class="btn small" id="relSave">Save</button></div>
+                </div>
                 <button type="button" class="btn small" id="phoneRefresh" title="Look for the network again, if wifi was joined after the app started">Refresh address</button>
                 <p class="note" id="phoneOther"></p>
               </div>
@@ -1246,6 +1255,8 @@ function receive(m) {
       else if (m.on && !micOn && !phoneMic) startMic().then(() => { setMicLabel(); toast("Listening (from a phone)."); })
         .catch(() => toast("A phone asked the laptop to listen, but the microphone could not be opened."));
     }
+  } else if (m.type === "relay") {
+    renderRelay(m);
   } else if (m.type === "update") {
     renderUpdate(m);
   } else if (m.type === "phones") {
@@ -1537,6 +1548,19 @@ function renderUpdate(m) {
   $("updGo").hidden = !m.ready || !!m.restarting;
   if (m.checking) setTimeout(() => LIVE && command({ cmd: "update_status" }), 4000);
 }
+function renderRelay(m) {
+  let t;
+  if (!m.url || !m.key_set) t = "Not set up. Put in the address and key from the plugin on the website.";
+  else if (m.state === "ok") t = m.phones ? "Connected. A phone is using the remote page." : "Connected to the website. Ready for a phone.";
+  else if (m.state === "error") t = "Can't reach the page: " + (m.error || "check the address and key") + ".";
+  else t = "Connecting…";
+  $("relText").textContent = t;
+  if (document.activeElement !== $("relUrl")) $("relUrl").value = m.url || "";
+  $("relKey").placeholder = m.key_set ? "Key saved (type a new one to change it)" : "Paste the key (kept on this computer)";
+}
+$("relSave").onclick = () => { if (!LIVE) return; command({ cmd: "relay_set", url: $("relUrl").value.trim(), key: $("relKey").value.trim() }); $("relKey").value = ""; $("relText").textContent = "Saved. Connecting…"; setTimeout(() => command({ cmd: "relay_get" }), 3000); };
+setInterval(() => { if (LIVE && !document.hidden) command({ cmd: "relay_get" }); }, 15000);
+setTimeout(() => { if (LIVE) command({ cmd: "relay_get" }); }, 3500);
 $("updCheck").onclick = () => { $("updText").textContent = "Looking for updates…"; command({ cmd: "update_check" }); };
 $("updGo").onclick = () => { if (confirm("Close the app and install the update now? It will start again by itself.")) command({ cmd: "update_restart" }); };
 $("updDir").addEventListener("input", () => soon("ud", () => { if (LIVE) command({ cmd: "settings", update_dir: $("updDir").value.trim() }); }, 600));
