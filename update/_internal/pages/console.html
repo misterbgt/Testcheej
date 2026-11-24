@@ -620,7 +620,8 @@ body[data-gw="extra"] .line, body[data-gw="extra"]  .screen-msg p.gur { font-wei
                     <input type="text" id="relUrl" maxlength="300" aria-label="Address of the remote control page" placeholder="https://…/wp-json/gurbani-remote/v1/"></label>
                   <label class="pick">Key
                     <input type="password" id="relKey" maxlength="128" autocomplete="off" aria-label="Key from the plugin" placeholder="Paste the key (kept on this computer)"></label>
-                  <div class="row"><button type="button" class="btn small" id="relSave">Save</button></div>
+                  <div class="row"><button type="button" class="btn small" id="relSave">Save</button><button type="button" class="btn small" id="relPair">Add this desktop (pair with a code)</button></div>
+                  <p id="relPairText" class="muted" aria-live="polite"></p>
                   <h4>Signed in to the remote page</h4>
                   <ul id="relPeople" class="muted"></ul>
                   <div class="row"><button type="button" class="btn small" id="relKickAll" hidden>Sign everyone out</button></div>
@@ -1557,7 +1558,14 @@ function renderRelay(m) {
   else if (m.state === "ok") t = m.phones ? "Connected. A phone is using the remote page." : "Connected to the website. Ready for a phone.";
   else if (m.state === "error") t = "Can't reach the page: " + (m.error || "check the address and key") + ".";
   else t = "Connecting…";
+  const pr = m.pair || {};
+  if (pr.state === "waiting") {
+    t = pr.code ? "Waiting for approval. Code: " + pr.code.slice(0, 3) + "-" + pr.code.slice(3) + " (open the remote page on the admin phone and tap Approve)" : "Asking the website…";
+    setTimeout(() => LIVE && command({ cmd: "relay_get" }), 3000);
+  } else if (pr.state === "done" && m.state !== "ok") t = "Paired with " + (pr.site || "the website") + ". Connecting…";
+  else if (pr.state === "failed") t = "Pairing did not work: " + (pr.error || "try again") + ".";
   $("relText").textContent = t;
+  $("relPair").disabled = pr.state === "waiting";
   const ul = $("relPeople"), ppl = m.sessions || [];
   ul.replaceChildren(...ppl.map(x => {
     const li = document.createElement("li"); li.textContent = (x.online ? "● " : "○ ") + x.label + " · " + x.ip + " · seen " + Math.max(0, Math.round((Date.now() / 1000 - x.seen) / 60)) + " min ago ";
@@ -1570,6 +1578,7 @@ function renderRelay(m) {
   $("relKey").placeholder = m.key_set ? "Key saved (type a new one to change it)" : "Paste the key (kept on this computer)";
 }
 $("relKickAll").onclick = () => { if (confirm("Sign everyone out of the remote page? They need the PIN again.")) { command({ cmd: "relay_kick", all: true }); setTimeout(() => command({ cmd: "relay_get" }), 3000); } };
+$("relPair").onclick = () => { if (LIVE) { command({ cmd: "relay_pair" }); $("relText").textContent = "Asking the website…"; setTimeout(() => command({ cmd: "relay_get" }), 1500); } };
 $("relSave").onclick = () => { if (!LIVE) return; command({ cmd: "relay_set", url: $("relUrl").value.trim(), key: $("relKey").value.trim() }); $("relKey").value = ""; $("relText").textContent = "Saved. Connecting…"; setTimeout(() => command({ cmd: "relay_get" }), 3000); };
 setInterval(() => { if (LIVE && !document.hidden) command({ cmd: "relay_get" }); }, 15000);
 setTimeout(() => { if (LIVE) command({ cmd: "relay_get" }); }, 3500);
