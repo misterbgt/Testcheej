@@ -419,6 +419,7 @@ ol { list-style: none; margin: 0; padding: 0; }
     <button type="button" class="mitem" id="menuStop"><span aria-hidden="true" style="width:22px;text-align:center;font-size:20px">&#9632;</span><span>Stop the laptop listening</span></button>
     <button type="button" class="mitem" id="menuStart"><span aria-hidden="true" style="width:22px;text-align:center;font-size:20px">&#9654;</span><span>Start the laptop listening</span></button>
     <button type="button" class="mitem" id="menuUpdate"><span aria-hidden="true" style="width:22px;text-align:center;font-size:20px">&#8635;</span><span id="updLabel">Check for updates</span></button>
+    <button type="button" class="mitem" id="menuUpdateNow"><span aria-hidden="true" style="width:22px;text-align:center;font-size:20px">&#9211;</span><span>Update and restart the laptop app now</span></button>
     <button type="button" class="mitem" id="menuSizes"><span aria-hidden="true" class="gur" style="width:22px;text-align:center;font-size:20px">ਅ</span><span>Screen text sizes</span></button>
     <div class="mhead">This phone</div>
     <button type="button" class="mitem" id="menuSettings" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span><b>Settings</b><small>Translation, next line, bani lengths</small></span></button>
@@ -1026,6 +1027,7 @@ $("menuUpdate").onclick = () => {
   if (UPD && UPD.ready) { if (confirm("Close the app on the laptop and install the update now? It starts again by itself.")) send({ cmd: "update_restart" }); }
   else { $("updLabel").textContent = "Looking for updates…"; send({ cmd: "update_check" }); setTimeout(() => send({ cmd: "update_status" }, true), 5000); }
 };
+$("menuUpdateNow").onclick = () => { if (confirm("Close the app on the laptop, install the newest version and start it again? It stops for a minute or so.")) { sheet("menu", false); send({ cmd: "update_now" }); banner("Updating the laptop app. It will restart by itself; this page reconnects."); } };
 $("menuClear").onclick = () => { sheet("menu", false); send({ cmd: "reset" }); };
 $("menuStop").onclick = () => { sheet("menu", false); send({ cmd: "listen_stop" }); };
 $("menuStart").onclick = () => { sheet("menu", false); send({ cmd: "listen_start" }); };

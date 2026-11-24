@@ -609,7 +609,7 @@ body[data-gw="extra"] .line, body[data-gw="extra"]  .screen-msg p.gur { font-wei
                 <div class="upd" id="updBox">
                   <h4>Updates</h4>
                   <p id="updText" class="muted">Looking for updates…</p>
-                  <div class="row"><button type="button" class="btn small" id="updCheck">Check now</button><button type="button" class="btn small" id="updGo" hidden>Restart and install now</button></div>
+                  <div class="row"><button type="button" class="btn small" id="updCheck">Check now</button><button type="button" class="btn small" id="updGo" hidden>Restart and install now</button><button type="button" class="btn small" id="updNow">Update and restart now</button></div>
                   <label class="pick">Update web address or folder (leave blank to use the usual one)
                     <input type="text" id="updDir" maxlength="260" aria-label="Folder the updates are put in" placeholder="Usual update folder"></label>
                 </div>
@@ -1561,6 +1561,7 @@ function renderRelay(m) {
 $("relSave").onclick = () => { if (!LIVE) return; command({ cmd: "relay_set", url: $("relUrl").value.trim(), key: $("relKey").value.trim() }); $("relKey").value = ""; $("relText").textContent = "Saved. Connecting…"; setTimeout(() => command({ cmd: "relay_get" }), 3000); };
 setInterval(() => { if (LIVE && !document.hidden) command({ cmd: "relay_get" }); }, 15000);
 setTimeout(() => { if (LIVE) command({ cmd: "relay_get" }); }, 3500);
+$("updNow").onclick = () => { if (confirm("Close the app, install the newest version and start it again?")) { $("updText").textContent = "Updating and restarting…"; command({ cmd: "update_now" }); } };
 $("updCheck").onclick = () => { $("updText").textContent = "Looking for updates…"; command({ cmd: "update_check" }); };
 $("updGo").onclick = () => { if (confirm("Close the app and install the update now? It will start again by itself.")) command({ cmd: "update_restart" }); };
 $("updDir").addEventListener("input", () => soon("ud", () => { if (LIVE) command({ cmd: "settings", update_dir: $("updDir").value.trim() }); }, 600));
