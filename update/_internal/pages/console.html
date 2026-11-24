@@ -190,7 +190,7 @@ select { background: var(--panel); border: 1px solid var(--rule); border-radius:
 .hist .t { font: 600 13px var(--ui); color: var(--kesri); margin-right: 6px; }
 body.searching .side .ctx { display: none !important; }      /* searching: the results get the room */
 .back p { margin: 0; }
-.phone-on { display: flex; gap: 12px; align-items: flex-start; }
+.phone-on { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
 .phone-on > div { display: grid; gap: 6px; min-width: 0; }
 .phone-panel .qr { width: 132px; height: 132px; border-radius: 8px; overflow: hidden; background: #fff; padding: 4px; flex: none; }
 .phone-panel .qr svg { display: block; width: 100%; height: 100%; }
@@ -243,7 +243,7 @@ input[type=range] { accent-color: var(--kesri); width: 220px; max-width: 100%; }
 .settings label { display: flex; gap: 10px; align-items: center; cursor: pointer; }
 .settings input { width: 18px; height: 18px; accent-color: var(--kesri); }
 .settings-panel { width: 400px !important; max-height: calc(100vh - 90px); overflow-y: auto; }
-.stabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; background: var(--btn); border-radius: 10px; padding: 3px; }
+.stabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 3px; background: var(--btn); border-radius: 10px; padding: 3px; }
 .stabs button { border: 0; background: transparent; border-radius: 8px; min-height: 34px; font-size: 14px; font-weight: 500; cursor: pointer; padding: 0 4px; }
 .stabs button[aria-selected="true"] { background: var(--panel); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
 .spage { display: grid; gap: 8px; padding-top: 4px; }
@@ -559,6 +559,7 @@ body[data-gw="extra"] .line, body[data-gw="extra"]  .screen-msg p.gur { font-wei
             <button type="button" role="tab" data-stab="display" aria-selected="true">Display</button>
             <button type="button" role="tab" data-stab="sizes" aria-selected="false">Text size</button>
             <button type="button" role="tab" data-stab="phones" aria-selected="false" id="phoneSummary">Phones</button>
+            <button type="button" role="tab" data-stab="online" aria-selected="false">Online</button>
             <button type="button" role="tab" data-stab="learn" aria-selected="false">Learning</button>
           </div>
           <div class="spage" data-spage="display">
@@ -600,28 +601,12 @@ body[data-gw="extra"] .line, body[data-gw="extra"]  .screen-msg p.gur { font-wei
             <button type="button" class="btn small" id="sizeReset">Reset text sizes</button>
           </div>
           <div class="spage phone-panel" data-spage="phones" hidden id="phonePanel">
-            <label><input type="checkbox" data-set="phone"> Let phones on this Wi-Fi control the console</label>
+            <label><input type="checkbox" data-set="phone"> Let phones on this Wi-Fi control the console (local)</label>
             <div id="phoneOn" class="phone-on">
               <div class="qr" id="phoneQr" aria-hidden="true"></div>
               <div>
                 <p class="note">Scan with the phone camera, or type this into the phone's browser:</p>
                 <p class="addr" id="phoneAddr"></p>
-                <div class="upd" id="updBox">
-                  <h4>Updates</h4>
-                  <p id="updText" class="muted">Looking for updates…</p>
-                  <div class="row"><button type="button" class="btn small" id="updCheck">Check now</button><button type="button" class="btn small" id="updGo" hidden>Restart and install now</button><button type="button" class="btn small" id="updNow">Update and restart now</button></div>
-                  <label class="pick">Update web address or folder (leave blank to use the usual one)
-                    <input type="text" id="updDir" maxlength="260" aria-label="Folder the updates are put in" placeholder="Usual update folder"></label>
-                </div>
-                <div class="upd" id="relBox">
-                  <h4>Remote control from anywhere</h4>
-                  <p id="relText" class="muted">Not set up.</p>
-                  <div class="row"><button type="button" class="btn small" id="relPair">Add this desktop (pair with a code)</button></div>
-                  <p id="relPairText" aria-live="polite" style="font-size:1.4em;font-weight:700;letter-spacing:.08em"></p>
-                  <h4>Signed in to the remote page</h4>
-                  <ul id="relPeople" class="muted"></ul>
-                  <div class="row"><button type="button" class="btn small" id="relKickAll" hidden>Sign everyone out</button></div>
-                </div>
                 <button type="button" class="btn small" id="phoneRefresh" title="Look for the network again, if wifi was joined after the app started">Refresh address</button>
                 <p class="note" id="phoneOther"></p>
               </div>
@@ -635,6 +620,25 @@ body[data-gw="extra"] .line, body[data-gw="extra"]  .screen-msg p.gur { font-wei
               <ul id="blockedList"></ul>
             </div>
             <p class="note">The phone must be on the same Wi-Fi as this computer. If it can't open the address, allow Gurbani Audio Searcher through Windows Firewall (Windows asks the first time).</p>
+          </div>
+          <div class="spage online-panel phone-panel" data-spage="online" hidden>
+        <div class="upd" id="updBox">
+          <h4>Updates</h4>
+          <p id="updText" class="muted">Looking for updates…</p>
+          <div class="row"><button type="button" class="btn small" id="updCheck">Check now</button><button type="button" class="btn small" id="updGo" hidden>Restart and install now</button><button type="button" class="btn small" id="updNow">Update and restart now</button></div>
+          <details><summary class="muted">Advanced: where updates come from</summary>
+          <label class="pick">Update web address or folder (leave blank to use the usual one)
+            <input type="text" id="updDir" maxlength="260" aria-label="Folder the updates are put in" placeholder="Usual update folder"></label></details>
+        </div>
+        <div class="upd" id="relBox">
+          <h4>Connect from anywhere</h4>
+          <p id="relText" class="muted">Not set up.</p>
+          <div class="row"><button type="button" class="btn small" id="relPair">Add this desktop (pair with a code)</button></div>
+          <p id="relPairText" aria-live="polite" style="font-size:1.4em;font-weight:700;letter-spacing:.08em"></p>
+          <h4>Signed in from anywhere</h4>
+          <ul id="relPeople" class="muted"></ul>
+          <div class="row"><button type="button" class="btn small" id="relKickAll" hidden>Sign everyone out</button></div>
+        </div>
           </div>
           <div class="spage" data-spage="learn" hidden>
             <label><input type="checkbox" data-set="learn"> Learn from shabads picked by hand</label>
@@ -1113,7 +1117,7 @@ function renderList(track, pos) {
   $("listBox").hidden = false; $("listEmpty").hidden = true;
   const ang = Number(line.ang) || null;
   if (S.pickPending) { S.manualTrack = track.id; S.pickPending = false; }     // a pick by hand: show its Ang
-  const asAng = ang && (track.kind === "granth" || (track.kind === "shabad" && (S.manualTrack === track.id || S.angOpen === track.id)));
+  const asAng = ang && track.kind === "granth";                  // the whole Ang: Akhand / Sehaj Paath only
   if (asAng) {
     $("listTitle").textContent = "Ang " + ang;
     S.angLive = ang;
@@ -1126,10 +1130,6 @@ function renderList(track, pos) {
   const bani = track.kind === "bani";
   $("listTitle").textContent = bani ? (track.subtitle || track.title || "Bani") : "Lines of this shabad";
   $("lineList").replaceChildren(...L.map((l, i) => lineItem(l.g, i === pos, () => command({ cmd: "goto", pos: i }))));
-  if (!bani && ang) {                                  // found by listening: the Ang is one tap away
-    $("angHere").hidden = false; $("angHere").textContent = "Show the whole Ang " + ang;
-    $("angHere").onclick = () => { S.angOpen = track.id; S.lastList = null; render(); };
-  }
   if (!$("tab-lines").hidden) showCurrentLine(false);
 }
 function requestAng(n) {
@@ -1461,7 +1461,7 @@ function renderPhones(m) {
   $("ovLan").textContent = url ? url.replace(/\/phone$/, "/overlay") : "This computer isn't connected to a network.";
   $("phoneOther").textContent = (m.urls || []).length > 1 ? `If that doesn't open, try ${m.urls.slice(1).join(" or ")}` : "";
   const n = (m.phones || []).length;
-  $("phoneSummary").textContent = !m.on ? "Phones: off" : "Phones";
+  $("phoneSummary").textContent = "Phones";
   $("phoneBadge").hidden = !n; $("phoneBadge").textContent = String(n);
   $("settingsSummary").title = "Settings: display, text size, phones" + (!m.on ? " (phone control is off)" : n ? ` (${n} phone${n > 1 ? "s" : ""} connected)` : "");
   const row = (p, label, cmd) => {
